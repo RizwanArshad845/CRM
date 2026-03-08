@@ -5,7 +5,6 @@ import { AdminDashboard } from './admin/AdminDashboard';
 import { SalesDashboard } from './sales/SalesDashboard';
 import { FinanceDashboard } from './finance/FinanceDashboard';
 import { CSTDashboard } from './cst/CSTDashboard';
-import { QADashboard } from './qa/QADashboard';
 
 export function Dashboard() {
   const { user } = useAuth();
