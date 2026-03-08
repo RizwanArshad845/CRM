@@ -37,8 +37,6 @@ export function Dashboard() {
       return <FinanceDashboard />;
     case 'cst':
       return <CSTDashboard />;
-    case 'qa':
-      return <QADashboard />;
     default:
       return <div>Unknown role</div>;
   }

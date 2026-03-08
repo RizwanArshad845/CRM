@@ -100,7 +100,6 @@ export function Login() {
               <p>• john@company.com (Sales)</p>
               <p>• robert@company.com (Finance)</p>
               <p>• emily@company.com (CST)</p>
-              <p>• sarah@company.com (QA)</p>
               <p className="mt-2 italic">Password: any</p>
             </div>
           </div>
