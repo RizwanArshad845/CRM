@@ -248,6 +248,55 @@ export const MANAGER_TASK_METRICS = [
     { id: '2', managerName: 'Emily Davis', department: 'CST', totalTasks: 30, completedTasks: 28, missedTasks: 1, month: 'February' },
 ];
 
+// ─── Employee Task Details (per person drill-down) ────────────────────────────
+export type TaskPriority = 'high' | 'medium' | 'low';
+export type TaskItemStatus = 'completed' | 'in-progress' | 'missed' | 'pending';
+
+export interface EmployeeTaskItem {
+    id: string;
+    employeeName: string;
+    title: string;
+    priority: TaskPriority;
+    status: TaskItemStatus;
+    dueDate: string;
+    category: string;
+}
+
+export const EMPLOYEE_TASK_DETAILS: EmployeeTaskItem[] = [
+    // John Smith — Sales Manager
+    { id: 't1', employeeName: 'John Smith', title: 'Weekly sales pipeline review', priority: 'high', status: 'completed', dueDate: '2026-02-10', category: 'Management' },
+    { id: 't2', employeeName: 'John Smith', title: 'Client proposal: ABC Corp', priority: 'high', status: 'completed', dueDate: '2026-02-12', category: 'Sales' },
+    { id: 't3', employeeName: 'John Smith', title: 'Q1 target report submission', priority: 'high', status: 'in-progress', dueDate: '2026-03-01', category: 'Report' },
+    { id: 't4', employeeName: 'John Smith', title: 'Agent performance coaching', priority: 'medium', status: 'pending', dueDate: '2026-03-05', category: 'HR' },
+    { id: 't5', employeeName: 'John Smith', title: 'Update CRM lead status', priority: 'low', status: 'missed', dueDate: '2026-02-20', category: 'Admin' },
+    // Sarah Johnson — Sales Agent
+    { id: 't6', employeeName: 'Sarah Johnson', title: 'Follow up: XYZ Enterprise demo', priority: 'high', status: 'completed', dueDate: '2026-02-11', category: 'Sales' },
+    { id: 't7', employeeName: 'Sarah Johnson', title: 'Cold call campaign (batch 3)', priority: 'medium', status: 'completed', dueDate: '2026-02-14', category: 'Sales' },
+    { id: 't8', employeeName: 'Sarah Johnson', title: 'Submit weekly activity log', priority: 'low', status: 'in-progress', dueDate: '2026-03-14', category: 'Admin' },
+    // Emily Davis — CST Lead
+    { id: 't9', employeeName: 'Emily Davis', title: 'Onboard StartUp Hub', priority: 'high', status: 'completed', dueDate: '2026-02-20', category: 'Onboarding' },
+    { id: 't10', employeeName: 'Emily Davis', title: 'Monthly check-in: ABC Corp', priority: 'medium', status: 'completed', dueDate: '2026-02-18', category: 'Client' },
+    { id: 't11', employeeName: 'Emily Davis', title: 'Escalation review: Premium Ptrs', priority: 'high', status: 'in-progress', dueDate: '2026-03-10', category: 'Escalation' },
+    { id: 't12', employeeName: 'Emily Davis', title: 'CST process documentation', priority: 'low', status: 'missed', dueDate: '2026-02-28', category: 'Admin' },
+    // Mike Chen — CST Agent
+    { id: 't13', employeeName: 'Mike Chen', title: 'Follow up: Global Services Inc', priority: 'high', status: 'completed', dueDate: '2026-02-15', category: 'Client' },
+    { id: 't14', employeeName: 'Mike Chen', title: 'Update client health dashboard', priority: 'medium', status: 'missed', dueDate: '2026-02-22', category: 'Admin' },
+    // Robert Wilson — Finance
+    { id: 't15', employeeName: 'Robert Wilson', title: 'Process February payroll', priority: 'high', status: 'completed', dueDate: '2026-02-28', category: 'Payroll' },
+    { id: 't16', employeeName: 'Robert Wilson', title: 'Generate Q1 financial report', priority: 'high', status: 'in-progress', dueDate: '2026-03-05', category: 'Report' },
+    // Sarah Martinez — QA
+    { id: 't17', employeeName: 'Sarah Martinez', title: 'Sales call quality audit', priority: 'high', status: 'completed', dueDate: '2026-02-12', category: 'Audit' },
+    { id: 't18', employeeName: 'Sarah Martinez', title: 'CST evaluation batch review', priority: 'high', status: 'completed', dueDate: '2026-02-19', category: 'Evaluation' },
+    { id: 't19', employeeName: 'Sarah Martinez', title: 'Issue resolution follow-ups', priority: 'medium', status: 'pending', dueDate: '2026-03-08', category: 'QA' },
+];
+
+// ─── Sales Manager Performance (for Admin overview) ───────────────────────────
+export const SALES_MANAGER_PERFORMANCE = [
+    { id: '1', name: 'Ahmed Khan', role: 'Sales Manager', totalRevenue: 220000, targetRevenue: 250000, teamsManaged: 5, agentPerformanceAvg: 87, monthlyDeals: 48, attendanceRate: 97, tardies: 0, overallScore: 90 },
+];
+
+
+
 export const QA_UPCOMING_EVENTS = [
     { id: '1', title: 'QA Team Review Meeting', date: '2026-03-05', type: 'meeting' },
     { id: '2', title: 'Quality Audit — Sales Calls', date: '2026-03-10', type: 'deadline' },
