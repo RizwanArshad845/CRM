@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Clock, CheckCircle, LogOut, User } from 'lucide-react';
+import { Clock, CheckCircle, LogOut, User, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function ClockIn() {
-  const { user, clockIn, clockOut, logout } = useAuth();
+  const { user, staleSession, clockIn, clockOut, logout, clearStaleSession } = useAuth();
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hoursWorked, setHoursWorked] = useState(0);
@@ -20,7 +20,7 @@ export function ClockIn() {
 
     const timer = setInterval(() => {
       setCurrentTime(new Date());
-      
+
       if (user.clockedIn && user.clockInTime) {
         const clockInDate = new Date(user.clockInTime);
         const diff = (new Date().getTime() - clockInDate.getTime()) / 1000 / 60 / 60;
@@ -57,16 +57,16 @@ export function ClockIn() {
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
+    return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -148,8 +148,8 @@ export function ClockIn() {
             {/* Actions */}
             <div className="space-y-3">
               {!user.clockedIn ? (
-                <Button 
-                  onClick={handleClockIn} 
+                <Button
+                  onClick={handleClockIn}
                   className="w-full h-14 text-lg"
                   size="lg"
                 >
@@ -158,15 +158,15 @@ export function ClockIn() {
                 </Button>
               ) : (
                 <>
-                  <Button 
-                    onClick={handleAccessPortal} 
+                  <Button
+                    onClick={handleAccessPortal}
                     className="w-full h-14 text-lg"
                     size="lg"
                   >
                     Access Portal
                   </Button>
-                  <Button 
-                    onClick={handleClockOut} 
+                  <Button
+                    onClick={handleClockOut}
                     variant="outline"
                     className="w-full"
                   >
@@ -187,6 +187,23 @@ export function ClockIn() {
             )}
           </CardContent>
         </Card>
+
+        {/* Stale session warning */}
+        {staleSession && (
+          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="font-semibold text-amber-800 dark:text-amber-200 text-sm">Missed Clock-Out Detected</p>
+                <p className="text-amber-700 dark:text-amber-300 text-xs mt-0.5">
+                  You closed the app without clocking out during your last session.<br />
+                  Last clock-in: <span className="font-mono font-bold">{new Date(staleSession.clockInTime).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                </p>
+              </div>
+              <button onClick={clearStaleSession} className="text-amber-600 hover:text-amber-800 text-xs underline shrink-0">Dismiss</button>
+            </div>
+          </div>
+        )}
 
         {/* Daily Attendance History */}
         <Card>

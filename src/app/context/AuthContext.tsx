@@ -1,15 +1,18 @@
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '../types/crm';
 
 interface AuthContextType {
   user: User | null;
+  staleSession: { name: string; clockInTime: string } | null;
   login: (email: string, password: string) => boolean;
   logout: () => void;
   clockIn: () => void;
   clockOut: () => void;
+  clearStaleSession: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const SESSION_KEY = 'crm_clock_session';
 
 // Mock users for demonstration
 const mockUsers: User[] = [
@@ -22,46 +25,64 @@ const mockUsers: User[] = [
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [staleSession, setStaleSession] = useState<{ name: string; clockInTime: string } | null>(null);
+
+  // Warn the user before closing the tab if still clocked in
+  useEffect(() => {
+    const warn = (e: BeforeUnloadEvent) => {
+      if (user?.clockedIn) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [user?.clockedIn]);
 
   const login = (email: string, password: string): boolean => {
-    // Simple mock authentication
     const foundUser = mockUsers.find(u => u.email === email);
-    if (foundUser) {
-      setUser({ ...foundUser });
-      return true;
+    if (!foundUser) return false;
+
+    // Check if this user has a stale (never clocked-out) session in localStorage
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (raw) {
+      const saved = JSON.parse(raw) as { userId: string; name: string; clockInTime: string };
+      if (saved.userId === foundUser.id) {
+        setStaleSession({ name: saved.name, clockInTime: saved.clockInTime });
+      }
     }
-    return false;
+
+    setUser({ ...foundUser });
+    return true;
   };
 
   const logout = () => {
+    localStorage.removeItem(SESSION_KEY);
     setUser(null);
   };
 
   const clockIn = () => {
-    if (user) {
-      const now = new Date().toISOString();
-      setUser({
-        ...user,
-        clockedIn: true,
-        clockInTime: now,
-        clockOutTime: undefined,
-      });
-    }
+    if (!user) return;
+    const now = new Date().toISOString();
+    // Persist to localStorage so we can detect missed clock-outs
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: user.id, name: user.name, clockInTime: now }));
+    setUser({ ...user, clockedIn: true, clockInTime: now, clockOutTime: undefined });
   };
 
   const clockOut = () => {
-    if (user) {
-      const now = new Date().toISOString();
-      setUser({
-        ...user,
-        clockedIn: false,
-        clockOutTime: now,
-      });
-    }
+    if (!user) return;
+    // Clear the persisted session — they clocked out properly
+    localStorage.removeItem(SESSION_KEY);
+    setUser({ ...user, clockedIn: false, clockOutTime: new Date().toISOString() });
+  };
+
+  const clearStaleSession = () => {
+    localStorage.removeItem(SESSION_KEY);
+    setStaleSession(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, clockIn, clockOut }}>
+    <AuthContext.Provider value={{ user, staleSession, login, logout, clockIn, clockOut, clearStaleSession }}>
       {children}
     </AuthContext.Provider>
   );
@@ -69,8 +90,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }
