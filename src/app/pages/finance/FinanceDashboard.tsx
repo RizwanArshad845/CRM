@@ -6,7 +6,7 @@ import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { DollarSign, Download, Calculator, TrendingUp, TrendingDown, Edit, Trash2 } from 'lucide-react';
+import { DollarSign, Download, Calculator, TrendingUp, TrendingDown, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Employee } from '../../types/crm';
 import { DashboardHeader } from '../../components/shared/DashboardHeader';
@@ -29,17 +29,27 @@ const CALC_FIELDS: { k: string; label: string; placeholder: string }[] = [
   { k: 'advances', label: 'Advances', placeholder: '300' },
 ];
 
+const PKR = (n: number) => `₨ ${n.toLocaleString()}`;
+
 const EDIT_FIELDS: { k: 'baseSalary' | 'advancePayments' | 'accruedPayments'; label: string }[] = [
-  { k: 'baseSalary', label: 'Base Salary ($) *' },
-  { k: 'advancePayments', label: 'Advance Payments ($)' },
-  { k: 'accruedPayments', label: 'Accrued Payments ($)' },
+  { k: 'baseSalary', label: 'Base Salary (PKR) *' },
+  { k: 'advancePayments', label: 'Advance Payments (PKR)' },
+  { k: 'accruedPayments', label: 'Accrued Payments (PKR)' },
+];
+
+const EXPENSES = [
+  { id: '1', category: 'Office Rent', amount: 150000, date: '2026-03-01', status: 'paid' as const },
+  { id: '2', category: 'Utilities', amount: 25000, date: '2026-03-05', status: 'paid' as const },
+  { id: '3', category: 'Software Licences', amount: 45000, date: '2026-03-08', status: 'pending' as const },
+  { id: '4', category: 'Marketing Budget', amount: 80000, date: '2026-03-10', status: 'pending' as const },
+  { id: '5', category: 'Equipment', amount: 60000, date: '2026-03-12', status: 'paid' as const },
 ];
 
 type EditForm = { baseSalary: string; advancePayments: string; accruedPayments: string; paymentStatus: PaymentStatus };
 const EMPTY_EDIT: EditForm = { baseSalary: '', advancePayments: '', accruedPayments: '', paymentStatus: 'pending' };
 
 export function FinanceDashboard() {
-  const { employees, updateEmployee, deleteEmployee } = useEmployees();
+  const { employees, updateEmployee } = useEmployees();
   const [filterDept, setFilterDept] = useState('all');
   const [showCalc, setShowCalc] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -78,10 +88,10 @@ export function FinanceDashboard() {
       <DashboardHeader title="Finance Team Portal" bgColor="bg-[#2C3E50]" />
       <main className="container mx-auto px-4 py-8 space-y-6">
         <div className={cls.gridResponsive4}>
-          <StatCard icon={<DollarSign className="h-4 w-4 text-purple-500" />} title="Total Salaries" value={`$${totalSalaries.toLocaleString()}`} subtitle={`${active.length} active employees`} />
-          <StatCard icon={<TrendingDown className="h-4 w-4 text-orange-500" />} title="Advance Payments" value={`$${totalAdvances.toLocaleString()}`} subtitle="Paid in advance" valueClassName="text-orange-600" />
-          <StatCard icon={<TrendingUp className="h-4 w-4 text-green-500" />} title="Total Incoming" value="$245,000" subtitle="Revenue this month" valueClassName="text-green-600" />
-          <StatCard icon={<Calculator className="h-4 w-4 text-blue-500" />} title="Monthly Expenses" value={`$${(totalSalaries + 35000).toLocaleString()}`} subtitle="Total outgoing" valueClassName="text-blue-600" />
+          <StatCard icon={<DollarSign className="h-4 w-4 text-purple-500" />} title="Total Salaries" value={PKR(totalSalaries)} subtitle={`${active.length} active employees`} />
+          <StatCard icon={<TrendingDown className="h-4 w-4 text-orange-500" />} title="Advance Payments" value={PKR(totalAdvances)} subtitle="Paid in advance" valueClassName="text-orange-600" />
+          <StatCard icon={<TrendingUp className="h-4 w-4 text-green-500" />} title="Total Incoming" value="₨ 2,450,000" subtitle="Revenue this month" valueClassName="text-green-600" />
+          <StatCard icon={<Calculator className="h-4 w-4 text-blue-500" />} title="Monthly Expenses" value={PKR(totalSalaries + 360000)} subtitle="Total outgoing" valueClassName="text-blue-600" />
         </div>
 
         <Card>
@@ -110,7 +120,7 @@ export function FinanceDashboard() {
               </div>
               <div className={`mt-4 ${cls.mutedLg}`}>
                 <p className={cls.hint}>Total Calculated</p>
-                <p className="text-3xl font-bold">${calcTotal.toLocaleString()}</p>
+                <p className="text-3xl font-bold">₨ {calcTotal.toLocaleString()}</p>
               </div>
             </CardContent>
           )}
@@ -154,10 +164,10 @@ export function FinanceDashboard() {
                       <td className={cls.tableCell}>
                         <Badge variant={emp.isActive ? 'default' : 'secondary'}>{emp.isActive ? 'Active' : 'Inactive'}</Badge>
                       </td>
-                      <td className={cls.tableCell}>${emp.baseSalary.toLocaleString()}</td>
-                      <td className={`${cls.tableCell} text-orange-600`}>${emp.advancePayments.toLocaleString()}</td>
-                      <td className={`${cls.tableCell} text-green-600`}>${emp.accruedPayments.toLocaleString()}</td>
-                      <td className={`${cls.tableCell} ${cls.heading}`}>${emp.totalSalary.toLocaleString()}</td>
+                      <td className={cls.tableCell}>{PKR(emp.baseSalary)}</td>
+                      <td className={`${cls.tableCell} text-orange-600`}>{PKR(emp.advancePayments)}</td>
+                      <td className={`${cls.tableCell} text-green-600`}>{PKR(emp.accruedPayments)}</td>
+                      <td className={`${cls.tableCell} ${cls.heading}`}>{PKR(emp.totalSalary)}</td>
                       <td className={cls.tableCell}>
                         <Badge className={PAYMENT_COLORS[emp.paymentStatus]}>{emp.paymentStatus}</Badge>
                       </td>
@@ -165,11 +175,50 @@ export function FinanceDashboard() {
                         <div className={cls.iconRow}>
                           <Button variant="outline" size="sm" onClick={() => openEdit(emp)}><Edit className="h-4 w-4" /></Button>
                           <Button variant="outline" size="sm" onClick={() => toast.success('Salary slip generated!')}>Slip</Button>
-                          <Button variant="outline" size="sm" onClick={() => deleteEmployee(emp.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
                         </div>
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Expenses Table */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Monthly Expenses</CardTitle>
+            <CardDescription>Operational expenses for the current month</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="border-b-2">
+                  <tr>
+                    {['Category', 'Amount (PKR)', 'Date', 'Status'].map(h => (
+                      <th key={h} className={cls.tableHead}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {EXPENSES.map(exp => (
+                    <tr key={exp.id} className={cls.tableRow}>
+                      <td className={`${cls.tableCell} ${cls.heading}`}>{exp.category}</td>
+                      <td className={`${cls.tableCell} font-mono`}>{PKR(exp.amount)}</td>
+                      <td className={`${cls.tableCell} ${cls.mono} text-xs`}>{exp.date}</td>
+                      <td className={cls.tableCell}>
+                        <Badge className={exp.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>
+                          {exp.status}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                  <tr className="border-t-2 font-semibold">
+                    <td className={`${cls.tableCell} ${cls.heading}`}>Total</td>
+                    <td className={`${cls.tableCell} font-mono`}>{PKR(EXPENSES.reduce((s, e) => s + e.amount, 0))}</td>
+                    <td colSpan={2} />
+                  </tr>
                 </tbody>
               </table>
             </div>
@@ -203,7 +252,7 @@ export function FinanceDashboard() {
               </div>
               <div className={cls.muted}>
                 <p className={cls.hint}>Total Salary</p>
-                <p className={cls.metric}>${(Number(editForm.baseSalary) + Number(editForm.accruedPayments) - Number(editForm.advancePayments)).toLocaleString()}</p>
+                <p className={cls.metric}>{PKR(Number(editForm.baseSalary) + Number(editForm.accruedPayments) - Number(editForm.advancePayments))}</p>
               </div>
             </div>
             <DialogFooter>
