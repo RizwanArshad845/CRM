@@ -18,7 +18,6 @@ export function SalesDashboard() {
             <TabsTrigger value="entry"><FileText className="h-4 w-4 mr-2" />CST Entry</TabsTrigger>
             <TabsTrigger value="targets"><TrendingUp className="h-4 w-4 mr-2" />Monthly Targets</TabsTrigger>
             <TabsTrigger value="followup"><PhoneCall className="h-4 w-4 mr-2" />Follow-Up</TabsTrigger>
-            <TabsTrigger value="performance"><Users className="h-4 w-4 mr-2" />Agent Performance</TabsTrigger>
             <TabsTrigger value="recordings"><Mic className="h-4 w-4 mr-2" />Call Recordings</TabsTrigger>
           </TabsList>
           <TabsContent value="entry"><ClientEntryForm /></TabsContent>
