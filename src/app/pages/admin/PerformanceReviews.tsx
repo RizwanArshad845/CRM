@@ -1,13 +1,16 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Badge } from '../../components/ui/badge';
+import { Button } from '../../components/ui/button';
 import { Progress } from '../../components/ui/progress';
-import { Clock } from 'lucide-react';
+import { Download } from 'lucide-react';
 import { cls } from '../../styles/classes';
 import {
   SALES_TEAM_PERFORMANCE, CST_TEAM_PERFORMANCE,
   FINANCE_TEAM_PERFORMANCE, QA_TEAM_PERFORMANCE,
+  ATTENDANCE_LOG,
 } from '../../data/mockData';
+import type { AttendanceEntry } from '../../data/mockData';
 
 function scoreColor(score: number) {
   if (score >= 90) return 'text-green-600';
@@ -15,10 +18,59 @@ function scoreColor(score: number) {
   return 'text-red-600';
 }
 
-function attendanceColor(rate: number) {
-  if (rate >= 95) return 'text-green-600';
-  if (rate >= 85) return 'text-yellow-600';
-  return 'text-red-600';
+function statusBadge(status: AttendanceEntry['status']) {
+  if (status === 'on-time') return <Badge className="bg-green-100 text-green-800 border-0">On Time</Badge>;
+  if (status === 'tardy') return <Badge className="bg-yellow-100 text-yellow-800 border-0">Tardy</Badge>;
+  return <Badge className="bg-red-100 text-red-800 border-0">Absent</Badge>;
+}
+
+function exportCSV(name: string, records: AttendanceEntry[]) {
+  const header = 'Employee,Department,Date,Clock In,Clock Out,Hours Worked,Status\n';
+  const rows = records.map(r =>
+    `${r.employeeName},${r.department},${r.date},${r.clockIn ?? '—'},${r.clockOut ?? '—'},${r.hoursWorked ?? '—'},${r.status}`
+  ).join('\n');
+  const blob = new Blob([header + rows], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `attendance_${name.replace(/\s+/g, '_').toLowerCase()}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function AttendanceTable({ employeeId, employeeName }: { employeeId: string; employeeName: string }) {
+  const records = ATTENDANCE_LOG.filter(r => r.employeeId === employeeId);
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Attendance Log</p>
+        <Button variant="outline" size="sm" onClick={() => exportCSV(employeeName, records)}>
+          <Download className="h-3.5 w-3.5 mr-1" /> Export CSV
+        </Button>
+      </div>
+      <div className="overflow-x-auto rounded-lg border">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              {['Date', 'Clock In', 'Clock Out', 'Hours', 'Status'].map(h => (
+                <th key={h} className="px-3 py-2 text-left font-medium text-muted-foreground">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {records.map(r => (
+              <tr key={r.id} className="hover:bg-muted/30 transition-colors">
+                <td className="px-3 py-2 font-mono text-xs">{r.date}</td>
+                <td className="px-3 py-2 font-mono text-xs">{r.clockIn ?? <span className="text-muted-foreground">—</span>}</td>
+                <td className="px-3 py-2 font-mono text-xs">{r.clockOut ?? <span className="text-muted-foreground">—</span>}</td>
+                <td className="px-3 py-2 font-mono text-xs">{r.hoursWorked != null ? `${r.hoursWorked}h` : <span className="text-muted-foreground">—</span>}</td>
+                <td className="px-3 py-2">{statusBadge(r.status)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
 }
 
 function StatTile({ label, value }: { label: string; value: string | number }) {
@@ -26,24 +78,6 @@ function StatTile({ label, value }: { label: string; value: string | number }) {
     <div className={cls.muted}>
       <p className={`${cls.hintXs} mb-1`}>{label}</p>
       <p className={cls.metricSm}>{value}</p>
-    </div>
-  );
-}
-
-function AttendanceRow({ attendanceRate, tardies }: { attendanceRate: number; tardies: number }) {
-  return (
-    <div className={cls.grid2}>
-      <div className={`${cls.row} ${cls.itemSm}`}>
-        <span className={cls.label}>Attendance</span>
-        <span className={`font-bold ${attendanceColor(attendanceRate)}`}>{attendanceRate}%</span>
-      </div>
-      <div className={`${cls.row} ${cls.itemSm}`}>
-        <div className={cls.inline}>
-          <Clock className="h-4 w-4 text-muted-foreground" />
-          <span className={cls.label}>Tardies</span>
-        </div>
-        <Badge variant={tardies === 0 ? 'outline' : 'destructive'}>{tardies}</Badge>
-      </div>
     </div>
   );
 }
@@ -78,12 +112,22 @@ function TaskBadges({ completed, missed }: { completed: number; missed: number }
   );
 }
 
+// Employee ID mapping (matches INITIAL_EMPLOYEES in mockData)
+const EMP_ID: Record<string, string> = {
+  'John Smith': 'EMP001',
+  'Sarah Johnson': 'EMP002',
+  'Mike Chen': 'EMP003',
+  'Emily Davis': 'EMP004',
+  'Robert Wilson': 'EMP005',
+  'Sarah Martinez': 'EMP006',
+};
+
 export function PerformanceReviews() {
   return (
     <Card>
       <CardHeader>
         <CardTitle>Performance Reviews by Team</CardTitle>
-        <CardDescription>Comprehensive performance metrics and attendance tracking</CardDescription>
+        <CardDescription>Comprehensive performance metrics and full attendance records</CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="sales" className="w-full">
@@ -105,7 +149,6 @@ export function PerformanceReviews() {
                     <StatTile label="Conversion" value={`${m.conversionRate}%`} />
                     <StatTile label="Target" value={`$${m.targetRevenue.toLocaleString()}`} />
                   </div>
-                  <AttendanceRow attendanceRate={m.attendanceRate} tardies={m.tardies} />
                   <div>
                     <div className={`${cls.row} text-sm mb-2`}>
                       <span className={cls.label}>Revenue Progress</span>
@@ -113,6 +156,7 @@ export function PerformanceReviews() {
                     </div>
                     <Progress value={(m.monthlyRevenue / m.targetRevenue) * 100} />
                   </div>
+                  <AttendanceTable employeeId={EMP_ID[m.name] ?? ''} employeeName={m.name} />
                 </CardContent>
               </Card>
             ))}
@@ -130,7 +174,7 @@ export function PerformanceReviews() {
                     <StatTile label="Tasks Done" value={m.tasksCompleted} />
                   </div>
                   <TaskBadges completed={m.tasksCompleted} missed={m.tasksMissed} />
-                  <AttendanceRow attendanceRate={m.attendanceRate} tardies={m.tardies} />
+                  <AttendanceTable employeeId={EMP_ID[m.name] ?? ''} employeeName={m.name} />
                 </CardContent>
               </Card>
             ))}
@@ -148,7 +192,7 @@ export function PerformanceReviews() {
                     <StatTile label="Tasks Done" value={m.tasksCompleted} />
                   </div>
                   <TaskBadges completed={m.tasksCompleted} missed={m.tasksMissed} />
-                  <AttendanceRow attendanceRate={m.attendanceRate} tardies={m.tardies} />
+                  <AttendanceTable employeeId={EMP_ID[m.name] ?? ''} employeeName={m.name} />
                 </CardContent>
               </Card>
             ))}
@@ -166,7 +210,7 @@ export function PerformanceReviews() {
                     <StatTile label="Tasks Done" value={m.tasksCompleted} />
                   </div>
                   <TaskBadges completed={m.tasksCompleted} missed={m.tasksMissed} />
-                  <AttendanceRow attendanceRate={m.attendanceRate} tardies={m.tardies} />
+                  <AttendanceTable employeeId={EMP_ID[m.name] ?? ''} employeeName={m.name} />
                 </CardContent>
               </Card>
             ))}

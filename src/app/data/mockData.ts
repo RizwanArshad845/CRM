@@ -252,3 +252,92 @@ export const QA_UPCOMING_EVENTS = [
     { id: '1', title: 'QA Team Review Meeting', date: '2026-03-05', type: 'meeting' },
     { id: '2', title: 'Quality Audit — Sales Calls', date: '2026-03-10', type: 'deadline' },
 ];
+
+// ─── Attendance Log ───────────────────────────────────────────────────────────
+export type AttendanceStatus = 'on-time' | 'tardy' | 'absent';
+
+export interface AttendanceEntry {
+    id: string;
+    employeeId: string;
+    employeeName: string;
+    department: string;
+    date: string;
+    clockIn: string | null;
+    clockOut: string | null;
+    hoursWorked: number | null;
+    status: AttendanceStatus;
+}
+
+export const ATTENDANCE_LOG: AttendanceEntry[] = [
+    // John Smith — Sales Manager
+    { id: 'a1', employeeId: 'EMP001', employeeName: 'John Smith', department: 'Sales', date: '2026-03-03', clockIn: '09:02', clockOut: '17:05', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'a2', employeeId: 'EMP001', employeeName: 'John Smith', department: 'Sales', date: '2026-03-04', clockIn: '09:18', clockOut: '17:10', hoursWorked: 7.9, status: 'tardy' },
+    { id: 'a3', employeeId: 'EMP001', employeeName: 'John Smith', department: 'Sales', date: '2026-03-05', clockIn: '08:58', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'a4', employeeId: 'EMP001', employeeName: 'John Smith', department: 'Sales', date: '2026-03-06', clockIn: '09:31', clockOut: '17:20', hoursWorked: 7.8, status: 'tardy' },
+    { id: 'a5', employeeId: 'EMP001', employeeName: 'John Smith', department: 'Sales', date: '2026-03-07', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'a6', employeeId: 'EMP001', employeeName: 'John Smith', department: 'Sales', date: '2026-03-10', clockIn: '08:55', clockOut: '17:05', hoursWorked: 8.2, status: 'on-time' },
+    { id: 'a7', employeeId: 'EMP001', employeeName: 'John Smith', department: 'Sales', date: '2026-03-11', clockIn: '09:45', clockOut: '17:30', hoursWorked: 7.8, status: 'tardy' },
+    { id: 'a8', employeeId: 'EMP001', employeeName: 'John Smith', department: 'Sales', date: '2026-03-12', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'a9', employeeId: 'EMP001', employeeName: 'John Smith', department: 'Sales', date: '2026-03-13', clockIn: null, clockOut: null, hoursWorked: null, status: 'absent' },
+    { id: 'a10', employeeId: 'EMP001', employeeName: 'John Smith', department: 'Sales', date: '2026-03-14', clockIn: '09:05', clockOut: '17:00', hoursWorked: 7.9, status: 'on-time' },
+
+    // Sarah Johnson — Sales Agent
+    { id: 'b1', employeeId: 'EMP002', employeeName: 'Sarah Johnson', department: 'Sales', date: '2026-03-03', clockIn: '08:55', clockOut: '17:00', hoursWorked: 8.1, status: 'on-time' },
+    { id: 'b2', employeeId: 'EMP002', employeeName: 'Sarah Johnson', department: 'Sales', date: '2026-03-04', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'b3', employeeId: 'EMP002', employeeName: 'Sarah Johnson', department: 'Sales', date: '2026-03-05', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'b4', employeeId: 'EMP002', employeeName: 'Sarah Johnson', department: 'Sales', date: '2026-03-06', clockIn: '08:57', clockOut: '17:05', hoursWorked: 8.1, status: 'on-time' },
+    { id: 'b5', employeeId: 'EMP002', employeeName: 'Sarah Johnson', department: 'Sales', date: '2026-03-07', clockIn: '09:12', clockOut: '17:00', hoursWorked: 7.8, status: 'tardy' },
+    { id: 'b6', employeeId: 'EMP002', employeeName: 'Sarah Johnson', department: 'Sales', date: '2026-03-10', clockIn: '08:53', clockOut: '17:00', hoursWorked: 8.1, status: 'on-time' },
+    { id: 'b7', employeeId: 'EMP002', employeeName: 'Sarah Johnson', department: 'Sales', date: '2026-03-11', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'b8', employeeId: 'EMP002', employeeName: 'Sarah Johnson', department: 'Sales', date: '2026-03-12', clockIn: '09:01', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'b9', employeeId: 'EMP002', employeeName: 'Sarah Johnson', department: 'Sales', date: '2026-03-13', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'b10', employeeId: 'EMP002', employeeName: 'Sarah Johnson', department: 'Sales', date: '2026-03-14', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+
+    // Mike Chen — CST Agent
+    { id: 'c1', employeeId: 'EMP003', employeeName: 'Mike Chen', department: 'CST', date: '2026-03-03', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'c2', employeeId: 'EMP003', employeeName: 'Mike Chen', department: 'CST', date: '2026-03-04', clockIn: '09:20', clockOut: '17:10', hoursWorked: 7.8, status: 'tardy' },
+    { id: 'c3', employeeId: 'EMP003', employeeName: 'Mike Chen', department: 'CST', date: '2026-03-05', clockIn: '08:59', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'c4', employeeId: 'EMP003', employeeName: 'Mike Chen', department: 'CST', date: '2026-03-06', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'c5', employeeId: 'EMP003', employeeName: 'Mike Chen', department: 'CST', date: '2026-03-07', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'c6', employeeId: 'EMP003', employeeName: 'Mike Chen', department: 'CST', date: '2026-03-10', clockIn: null, clockOut: null, hoursWorked: null, status: 'absent' },
+    { id: 'c7', employeeId: 'EMP003', employeeName: 'Mike Chen', department: 'CST', date: '2026-03-11', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'c8', employeeId: 'EMP003', employeeName: 'Mike Chen', department: 'CST', date: '2026-03-12', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'c9', employeeId: 'EMP003', employeeName: 'Mike Chen', department: 'CST', date: '2026-03-13', clockIn: '09:35', clockOut: '17:15', hoursWorked: 7.7, status: 'tardy' },
+    { id: 'c10', employeeId: 'EMP003', employeeName: 'Mike Chen', department: 'CST', date: '2026-03-14', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+
+    // Emily Davis — CST Lead
+    { id: 'd1', employeeId: 'EMP004', employeeName: 'Emily Davis', department: 'CST', date: '2026-03-03', clockIn: '08:50', clockOut: '17:00', hoursWorked: 8.2, status: 'on-time' },
+    { id: 'd2', employeeId: 'EMP004', employeeName: 'Emily Davis', department: 'CST', date: '2026-03-04', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'd3', employeeId: 'EMP004', employeeName: 'Emily Davis', department: 'CST', date: '2026-03-05', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'd4', employeeId: 'EMP004', employeeName: 'Emily Davis', department: 'CST', date: '2026-03-06', clockIn: '08:55', clockOut: '17:05', hoursWorked: 8.2, status: 'on-time' },
+    { id: 'd5', employeeId: 'EMP004', employeeName: 'Emily Davis', department: 'CST', date: '2026-03-07', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'd6', employeeId: 'EMP004', employeeName: 'Emily Davis', department: 'CST', date: '2026-03-10', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'd7', employeeId: 'EMP004', employeeName: 'Emily Davis', department: 'CST', date: '2026-03-11', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'd8', employeeId: 'EMP004', employeeName: 'Emily Davis', department: 'CST', date: '2026-03-12', clockIn: '08:58', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'd9', employeeId: 'EMP004', employeeName: 'Emily Davis', department: 'CST', date: '2026-03-13', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'd10', employeeId: 'EMP004', employeeName: 'Emily Davis', department: 'CST', date: '2026-03-14', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+
+    // Robert Wilson — Finance Manager
+    { id: 'e1', employeeId: 'EMP005', employeeName: 'Robert Wilson', department: 'Finance', date: '2026-03-03', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'e2', employeeId: 'EMP005', employeeName: 'Robert Wilson', department: 'Finance', date: '2026-03-04', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'e3', employeeId: 'EMP005', employeeName: 'Robert Wilson', department: 'Finance', date: '2026-03-05', clockIn: '09:25', clockOut: '17:10', hoursWorked: 7.7, status: 'tardy' },
+    { id: 'e4', employeeId: 'EMP005', employeeName: 'Robert Wilson', department: 'Finance', date: '2026-03-06', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'e5', employeeId: 'EMP005', employeeName: 'Robert Wilson', department: 'Finance', date: '2026-03-07', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'e6', employeeId: 'EMP005', employeeName: 'Robert Wilson', department: 'Finance', date: '2026-03-10', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'e7', employeeId: 'EMP005', employeeName: 'Robert Wilson', department: 'Finance', date: '2026-03-11', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'e8', employeeId: 'EMP005', employeeName: 'Robert Wilson', department: 'Finance', date: '2026-03-12', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'e9', employeeId: 'EMP005', employeeName: 'Robert Wilson', department: 'Finance', date: '2026-03-13', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'e10', employeeId: 'EMP005', employeeName: 'Robert Wilson', department: 'Finance', date: '2026-03-14', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+
+    // Sarah Martinez — QA Specialist
+    { id: 'f1', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-03', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'f2', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-04', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'f3', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-05', clockIn: '08:52', clockOut: '17:00', hoursWorked: 8.1, status: 'on-time' },
+    { id: 'f4', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-06', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'f5', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-07', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'f6', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-10', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'f7', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-11', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'f8', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-12', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'f9', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-13', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+    { id: 'f10', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-14', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
+];
