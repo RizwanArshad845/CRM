@@ -83,39 +83,72 @@ function MemberHeader({ name, role, score }: { name: string; role: string; score
 }
 
 function AttendanceTable({ employeeId, employeeName }: { employeeId: string; employeeName: string }) {
+  const [showFull, setShowFull] = useState(false);
   const records = ATTENDANCE_LOG.filter(r => r.employeeId === employeeId);
+  const onTime = records.filter(r => r.status === 'on-time').length;
+  const tardy = records.filter(r => r.status === 'tardy').length;
+  const absent = records.filter(r => r.status === 'absent').length;
+  const avgHrs = records.length
+    ? (records.reduce((s, r) => s + (r.hoursWorked ?? 0), 0) / records.length).toFixed(1)
+    : '—';
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Attendance Log</p>
-        <Button variant="outline" size="sm" onClick={() => exportCSV(employeeName, records)}>
-          <Download className="h-3.5 w-3.5 mr-1" />Export CSV
-        </Button>
+        <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Attendance</p>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => exportCSV(employeeName, records)}>
+            <Download className="h-3.5 w-3.5 mr-1" />CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setShowFull(v => !v)}>
+            {showFull ? 'Hide Log' : 'View Full Log'}
+          </Button>
+        </div>
       </div>
-      <div className="overflow-x-auto rounded-lg border">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/50">
-            <tr>{['Date', 'Clock In', 'Clock Out', 'Hours', 'Status'].map(h => (
-              <th key={h} className="px-3 py-2 text-left font-medium text-muted-foreground">{h}</th>
-            ))}</tr>
-          </thead>
-          <tbody className="divide-y">
-            {records.map(r => (
-              <tr key={r.id} className="hover:bg-muted/30 transition-colors">
-                <td className="px-3 py-2 font-mono text-xs">{r.date}</td>
-                <td className="px-3 py-2 font-mono text-xs">{r.clockIn ?? <span className="text-muted-foreground">—</span>}</td>
-                <td className="px-3 py-2 font-mono text-xs">{r.clockOut ?? <span className="text-muted-foreground">—</span>}</td>
-                <td className="px-3 py-2 font-mono text-xs">{r.hoursWorked != null ? `${r.hoursWorked}h` : <span className="text-muted-foreground">—</span>}</td>
-                <td className="px-3 py-2">{statusBadge(r.status)}</td>
-              </tr>
-            ))}
-            {records.length === 0 && <tr><td colSpan={5} className="text-center py-4 text-muted-foreground text-sm">No attendance records</td></tr>}
-          </tbody>
-        </table>
+
+      {/* Summary tiles — always visible */}
+      <div className="grid grid-cols-4 gap-3">
+        {[
+          { label: 'On Time', value: onTime, bg: 'bg-green-50 border-green-200', text: 'text-green-700' },
+          { label: 'Tardy', value: tardy, bg: 'bg-yellow-50 border-yellow-200', text: 'text-yellow-700' },
+          { label: 'Absent', value: absent, bg: 'bg-red-50 border-red-200', text: 'text-red-700' },
+          { label: 'Avg Hrs', value: `${avgHrs}h`, bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700' },
+        ].map(({ label, value, bg, text }) => (
+          <div key={label} className={`rounded-lg border ${bg} px-3 py-2 text-center`}>
+            <p className={`text-xs font-medium ${text}`}>{label}</p>
+            <p className={`text-xl font-bold ${text}`}>{value}</p>
+          </div>
+        ))}
       </div>
+
+      {/* Full table — toggled */}
+      {showFull && (
+        <div className="overflow-x-auto rounded-lg border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50">
+              <tr>{['Date', 'Clock In', 'Clock Out', 'Hours', 'Status'].map(h => (
+                <th key={h} className="px-3 py-2 text-left font-medium text-muted-foreground">{h}</th>
+              ))}</tr>
+            </thead>
+            <tbody className="divide-y">
+              {records.map(r => (
+                <tr key={r.id} className="hover:bg-muted/30 transition-colors">
+                  <td className="px-3 py-2 font-mono text-xs">{r.date}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{r.clockIn ?? <span className="text-muted-foreground">—</span>}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{r.clockOut ?? <span className="text-muted-foreground">—</span>}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{r.hoursWorked != null ? `${r.hoursWorked}h` : <span className="text-muted-foreground">—</span>}</td>
+                  <td className="px-3 py-2">{statusBadge(r.status)}</td>
+                </tr>
+              ))}
+              {records.length === 0 && <tr><td colSpan={5} className="text-center py-4 text-muted-foreground text-sm">No attendance records</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
+
 
 function TaskDetailTable({ employeeName, search, filterStatus, filterPriority }: {
   employeeName: string; search: string; filterStatus: string; filterPriority: string;
