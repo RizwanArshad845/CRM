@@ -12,7 +12,7 @@ import type { Employee } from '../../types/crm';
 import { DashboardHeader } from '../../components/shared/DashboardHeader';
 import { StatCard } from '../../components/shared/StatCard';
 import { cls } from '../../styles/classes';
-import { INITIAL_EMPLOYEES } from '../../data/mockData';
+import { useEmployees } from '../../context/EmployeeContext';
 
 type PaymentStatus = 'paid' | 'pending' | 'partial';
 
@@ -39,7 +39,7 @@ type EditForm = { baseSalary: string; advancePayments: string; accruedPayments: 
 const EMPTY_EDIT: EditForm = { baseSalary: '', advancePayments: '', accruedPayments: '', paymentStatus: 'pending' };
 
 export function FinanceDashboard() {
-  const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
+  const { employees, updateEmployee, deleteEmployee } = useEmployees();
   const [filterDept, setFilterDept] = useState('all');
   const [showCalc, setShowCalc] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -61,25 +61,22 @@ export function FinanceDashboard() {
 
   const handleUpdate = () => {
     if (!editingEmp) return;
-    setEmployees(prev => prev.map(e => e.id === editingEmp.id
-      ? { ...e, baseSalary: Number(editForm.baseSalary), advancePayments: Number(editForm.advancePayments), accruedPayments: Number(editForm.accruedPayments), totalSalary: Number(editForm.baseSalary) + Number(editForm.accruedPayments) - Number(editForm.advancePayments), paymentStatus: editForm.paymentStatus }
-      : e
-    ));
+    updateEmployee({
+      ...editingEmp,
+      baseSalary: Number(editForm.baseSalary),
+      advancePayments: Number(editForm.advancePayments),
+      accruedPayments: Number(editForm.accruedPayments),
+      totalSalary: Number(editForm.baseSalary) + Number(editForm.accruedPayments) - Number(editForm.advancePayments),
+      paymentStatus: editForm.paymentStatus,
+    });
     toast.success('Salary updated!');
     setIsEditOpen(false);
-  };
-
-  const handleDelete = (id: string) => {
-    if (!confirm('Remove employee from payroll?')) return;
-    setEmployees(prev => prev.filter(e => e.id !== id));
-    toast.success('Employee removed!');
   };
 
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader title="Finance Team Portal" bgColor="bg-[#2C3E50]" />
       <main className="container mx-auto px-4 py-8 space-y-6">
-        {/* Summary Cards */}
         <div className={cls.gridResponsive4}>
           <StatCard icon={<DollarSign className="h-4 w-4 text-purple-500" />} title="Total Salaries" value={`$${totalSalaries.toLocaleString()}`} subtitle={`${active.length} active employees`} />
           <StatCard icon={<TrendingDown className="h-4 w-4 text-orange-500" />} title="Advance Payments" value={`$${totalAdvances.toLocaleString()}`} subtitle="Paid in advance" valueClassName="text-orange-600" />
@@ -87,7 +84,6 @@ export function FinanceDashboard() {
           <StatCard icon={<Calculator className="h-4 w-4 text-blue-500" />} title="Monthly Expenses" value={`$${(totalSalaries + 35000).toLocaleString()}`} subtitle="Total outgoing" valueClassName="text-blue-600" />
         </div>
 
-        {/* Calculator */}
         <Card>
           <CardHeader>
             <div className={cls.row}>
@@ -120,13 +116,12 @@ export function FinanceDashboard() {
           )}
         </Card>
 
-        {/* Salary Table */}
         <Card>
           <CardHeader>
             <div className={cls.row}>
               <div>
                 <CardTitle>Employee Salary Management</CardTitle>
-                <CardDescription>Manage payroll for all employees</CardDescription>
+                <CardDescription>Payroll syncs automatically with Admin employee additions</CardDescription>
               </div>
               <div className={cls.actions}>
                 <Select value={filterDept} onValueChange={setFilterDept}>
@@ -170,7 +165,7 @@ export function FinanceDashboard() {
                         <div className={cls.iconRow}>
                           <Button variant="outline" size="sm" onClick={() => openEdit(emp)}><Edit className="h-4 w-4" /></Button>
                           <Button variant="outline" size="sm" onClick={() => toast.success('Salary slip generated!')}>Slip</Button>
-                          <Button variant="outline" size="sm" onClick={() => handleDelete(emp.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
+                          <Button variant="outline" size="sm" onClick={() => deleteEmployee(emp.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
                         </div>
                       </td>
                     </tr>
@@ -181,7 +176,6 @@ export function FinanceDashboard() {
           </CardContent>
         </Card>
 
-        {/* Edit Dialog */}
         <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
@@ -209,9 +203,7 @@ export function FinanceDashboard() {
               </div>
               <div className={cls.muted}>
                 <p className={cls.hint}>Total Salary</p>
-                <p className={cls.metric}>
-                  ${(Number(editForm.baseSalary) + Number(editForm.accruedPayments) - Number(editForm.advancePayments)).toLocaleString()}
-                </p>
+                <p className={cls.metric}>${(Number(editForm.baseSalary) + Number(editForm.accruedPayments) - Number(editForm.advancePayments)).toLocaleString()}</p>
               </div>
             </div>
             <DialogFooter>

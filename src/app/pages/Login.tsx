@@ -135,7 +135,8 @@ export function Login() {
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-3">Demo Accounts</p>
             <div className="grid grid-cols-2 gap-y-1.5 text-xs text-gray-600 dark:text-gray-300">
               <span>admin@company.com</span><span className="text-gray-400">Admin</span>
-              <span>john@company.com</span><span className="text-gray-400">Sales</span>
+              <span>john@company.com</span><span className="text-gray-400">Sales Agent</span>
+              <span>ahmed@company.com</span><span className="text-gray-400">Sales Manager</span>
               <span>robert@company.com</span><span className="text-gray-400">Finance</span>
               <span>emily@company.com</span><span className="text-gray-400">CST</span>
             </div>

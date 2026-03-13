@@ -21,6 +21,7 @@ const mockUsers: User[] = [
   { id: '3', name: 'Robert Wilson', email: 'robert@company.com', role: 'finance', department: 'finance', clockedIn: false },
   { id: '4', name: 'Emily Davis', email: 'emily@company.com', role: 'cst', department: 'cst', clockedIn: false },
   { id: '5', name: 'Sarah Martinez', email: 'sarah@company.com', role: 'qa', department: 'qa', clockedIn: false },
+  { id: '6', name: 'Ahmed Khan', email: 'ahmed@company.com', role: 'sales_manager', department: 'sales', clockedIn: false },
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {

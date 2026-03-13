@@ -10,7 +10,8 @@ import { UserPlus, Edit, Trash2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Employee } from '../../types/crm';
 import { cls } from '../../styles/classes';
-import { INITIAL_EMPLOYEES, DEPARTMENTS } from '../../data/mockData';
+import { DEPARTMENTS } from '../../data/mockData';
+import { useEmployees } from '../../context/EmployeeContext';
 
 type EmpForm = { name: string; email: string; department: string; role: string; baseSalary: string };
 const EMPTY_EMP: EmpForm = { name: '', email: '', department: '', role: '', baseSalary: '' };
@@ -23,7 +24,7 @@ const FIELDS: { k: keyof EmpForm; label: string; placeholder: string; type?: str
 ];
 
 export function EmployeeManagement() {
-  const [employees, setEmployees] = useState<Employee[]>(INITIAL_EMPLOYEES);
+  const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Employee | null>(null);
@@ -48,7 +49,7 @@ export function EmployeeManagement() {
       hireDate: new Date().toISOString().split('T')[0],
       tardies: 0,
     };
-    setEmployees(prev => [...prev, emp]);
+    addEmployee(emp);
     toast.success(`${form.name} added!`);
     setIsAddOpen(false);
     setForm(EMPTY_EMP);
@@ -56,10 +57,12 @@ export function EmployeeManagement() {
 
   const handleEdit = () => {
     if (!editTarget) return;
-    setEmployees(prev => prev.map(e => e.id === editTarget.id
-      ? { ...e, name: form.name, email: form.email, department: form.department, role: form.role, baseSalary: Number(form.baseSalary), totalSalary: Number(form.baseSalary) + e.accruedPayments - e.advancePayments }
-      : e
-    ));
+    updateEmployee({
+      ...editTarget,
+      name: form.name, email: form.email, department: form.department,
+      role: form.role, baseSalary: Number(form.baseSalary),
+      totalSalary: Number(form.baseSalary) + editTarget.accruedPayments - editTarget.advancePayments,
+    });
     toast.success('Employee updated!');
     setIsEditOpen(false);
     setForm(EMPTY_EMP);
@@ -71,15 +74,7 @@ export function EmployeeManagement() {
     setIsEditOpen(true);
   };
 
-  const handleDelete = (id: string) => {
-    if (!confirm('Delete this employee?')) return;
-    setEmployees(prev => prev.filter(e => e.id !== id));
-    toast.success('Employee deleted!');
-  };
-
-  const toggleStatus = (id: string) => {
-    setEmployees(prev => prev.map(e => e.id === id ? { ...e, isActive: !e.isActive } : e));
-  };
+  const toggleStatus = (emp: Employee) => updateEmployee({ ...emp, isActive: !emp.isActive });
 
   function EmpFormFields({ prefix = '' }: { prefix?: string }) {
     return (
@@ -108,7 +103,7 @@ export function EmployeeManagement() {
         <div className={cls.row}>
           <div>
             <CardTitle>Employee Management</CardTitle>
-            <CardDescription>Full CRUD for all employees</CardDescription>
+            <CardDescription>Full CRUD for all employees — changes sync to Finance payroll</CardDescription>
           </div>
           <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
             <DialogTrigger asChild>
@@ -117,7 +112,7 @@ export function EmployeeManagement() {
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Add New Employee</DialogTitle>
-                <DialogDescription>Employee will be added to payroll</DialogDescription>
+                <DialogDescription>Employee will be added to payroll automatically</DialogDescription>
               </DialogHeader>
               <EmpFormFields />
               <DialogFooter>
@@ -152,7 +147,7 @@ export function EmployeeManagement() {
                   <td className={cls.tableCell}>{emp.department}</td>
                   <td className={cls.tableCell}><span className="text-sm">{emp.role}</span></td>
                   <td className={cls.tableCell}>
-                    <Badge variant={emp.isActive ? 'default' : 'secondary'} className="cursor-pointer" onClick={() => toggleStatus(emp.id)}>
+                    <Badge variant={emp.isActive ? 'default' : 'secondary'} className="cursor-pointer" onClick={() => toggleStatus(emp)}>
                       {emp.isActive ? 'Active' : 'Inactive'}
                     </Badge>
                   </td>
@@ -163,7 +158,7 @@ export function EmployeeManagement() {
                   <td className={cls.tableCell}>
                     <div className={cls.iconRow}>
                       <Button variant="outline" size="sm" onClick={() => openEdit(emp)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="outline" size="sm" onClick={() => handleDelete(emp.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
+                      <Button variant="outline" size="sm" onClick={() => deleteEmployee(emp.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
                     </div>
                   </td>
                 </tr>

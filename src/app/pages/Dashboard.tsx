@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { AdminDashboard } from './admin/AdminDashboard';
 import { SalesDashboard } from './sales/SalesDashboard';
+import { SalesManagerDashboard } from './sales-manager/SalesManagerDashboard';
 import { FinanceDashboard } from './finance/FinanceDashboard';
 import { CSTDashboard } from './cst/CSTDashboard';
 
@@ -32,6 +33,8 @@ export function Dashboard() {
       return <AdminDashboard />;
     case 'sales':
       return <SalesDashboard />;
+    case 'sales_manager':
+      return <SalesManagerDashboard />;
     case 'finance':
       return <FinanceDashboard />;
     case 'cst':

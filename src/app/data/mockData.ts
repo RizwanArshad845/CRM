@@ -341,3 +341,47 @@ export const ATTENDANCE_LOG: AttendanceEntry[] = [
     { id: 'f9', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-13', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
     { id: 'f10', employeeId: 'EMP006', employeeName: 'Sarah Martinez', department: 'QA', date: '2026-03-14', clockIn: '09:00', clockOut: '17:00', hoursWorked: 8.0, status: 'on-time' },
 ];
+
+// ─── Follow-Up Leads ──────────────────────────────────────────────────────────
+export type FollowUpStatus = 'pending' | 'contacted' | 'closed';
+
+export interface FollowUpLead {
+    id: string;
+    clientName: string;
+    agentName: string;
+    contactNo: string;
+    product: string;
+    area: string;
+    status: FollowUpStatus;
+    dueDate: string;
+    notes: string;
+}
+
+export const FOLLOW_UP_LEADS: FollowUpLead[] = [
+    { id: '1', clientName: 'ABC Corp', agentName: 'John Smith', contactNo: '+1 555-1234', product: 'SEO Services', area: 'North America', status: 'pending', dueDate: '2026-03-16', notes: 'Interested in Q2 package' },
+    { id: '2', clientName: 'XYZ Ltd', agentName: 'Sarah Johnson', contactNo: '+44 20-5678', product: 'Web Development', area: 'Europe', status: 'contacted', dueDate: '2026-03-18', notes: 'Awaiting tech proposal' },
+    { id: '3', clientName: 'Tech Hub', agentName: 'John Smith', contactNo: '+1 555-9012', product: 'Google Ads', area: 'North America', status: 'pending', dueDate: '2026-03-20', notes: 'Call scheduled for next Monday' },
+    { id: '4', clientName: 'Global Biz Inc', agentName: 'Sarah Johnson', contactNo: '+1 555-3456', product: 'Social Media Marketing', area: 'Latin America', status: 'closed', dueDate: '2026-03-10', notes: 'Converted — see CST entry' },
+];
+
+// ─── Agent Targets (last 3 months + current) ──────────────────────────────────
+export interface AgentTarget {
+    id: string;
+    agentId: string;
+    agentName: string;
+    month: string;
+    target: number;
+    achieved: number;
+}
+
+export const AGENT_TARGETS: AgentTarget[] = [
+    { id: 't1', agentId: '1', agentName: 'John Smith', month: 'December 2025', target: 140000, achieved: 130000 },
+    { id: 't2', agentId: '1', agentName: 'John Smith', month: 'January 2026', target: 145000, achieved: 138000 },
+    { id: 't3', agentId: '1', agentName: 'John Smith', month: 'February 2026', target: 150000, achieved: 125000 },
+    { id: 't4', agentId: '1', agentName: 'John Smith', month: 'March 2026', target: 150000, achieved: 0 },
+
+    { id: 't5', agentId: '2', agentName: 'Sarah Johnson', month: 'December 2025', target: 95000, achieved: 92000 },
+    { id: 't6', agentId: '2', agentName: 'Sarah Johnson', month: 'January 2026', target: 100000, achieved: 98000 },
+    { id: 't7', agentId: '2', agentName: 'Sarah Johnson', month: 'February 2026', target: 100000, achieved: 95000 },
+    { id: 't8', agentId: '2', agentName: 'Sarah Johnson', month: 'March 2026', target: 105000, achieved: 0 },
+];

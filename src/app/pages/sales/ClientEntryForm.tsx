@@ -12,15 +12,16 @@ import { PRODUCTS, SERVICE_AREAS } from '../../data/mockData';
 
 type FormData = {
   companyName: string; customerName: string; paymentAmount: string;
-  email: string; serviceArea: string; contactNo1: string; contactNo2: string;
+  productSold: string; email: string; serviceArea: string;
+  contactNo1: string; contactNo2: string;
   gbpLink: string; websiteLink: string; yelpLink: string;
   facebook: string; twitter: string; linkedin: string; instagram: string;
   clientConcerns: string; tipsForTech: string; notes: string;
 };
 
 const EMPTY_FORM: FormData = {
-  companyName: '', customerName: '', paymentAmount: '', email: '',
-  serviceArea: '', contactNo1: '', contactNo2: '', gbpLink: '',
+  companyName: '', customerName: '', paymentAmount: '', productSold: '',
+  email: '', serviceArea: '', contactNo1: '', contactNo2: '', gbpLink: '',
   websiteLink: '', yelpLink: '', facebook: '', twitter: '',
   linkedin: '', instagram: '', clientConcerns: '', tipsForTech: '', notes: '',
 };
@@ -86,6 +87,15 @@ export function ClientEntryForm() {
                   <SelectTrigger id="serviceArea"><SelectValue placeholder="Select service area" /></SelectTrigger>
                   <SelectContent>
                     {SERVICE_AREAS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className={cls.field}>
+                <Label htmlFor="productSold">Product / Category *</Label>
+                <Select value={formData.productSold} onValueChange={v => set('productSold', v)}>
+                  <SelectTrigger id="productSold"><SelectValue placeholder="Select product" /></SelectTrigger>
+                  <SelectContent>
+                    {PRODUCTS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

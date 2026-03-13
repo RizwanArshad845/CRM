@@ -31,7 +31,7 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'sales' | 'finance' | 'cst' | 'qa';
+  role: 'admin' | 'sales' | 'sales_manager' | 'finance' | 'cst' | 'qa';
   department: string;
   clockedIn: boolean;
   clockInTime?: string;
