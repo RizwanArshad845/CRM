@@ -77,7 +77,7 @@ export function FinanceDashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <DashboardHeader title="Finance Team Portal" bgColor="bg-[#8E44AD]" />
+      <DashboardHeader title="Finance Team Portal" bgColor="bg-[#2C3E50]" />
       <main className="container mx-auto px-4 py-8 space-y-6">
         {/* Summary Cards */}
         <div className={cls.gridResponsive4}>

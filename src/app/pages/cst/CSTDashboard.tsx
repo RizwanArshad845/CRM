@@ -39,7 +39,7 @@ function healthColor(score: number) {
 export function CSTDashboard() {
   return (
     <div className="min-h-screen bg-background">
-      <DashboardHeader title="Customer Success Team Portal" bgColor="bg-[#E67E22]" />
+      <DashboardHeader title="Customer Success Team Portal" bgColor="bg-[#2C3E50]" />
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="clients" className="w-full">
           <TabsList className="mb-6">

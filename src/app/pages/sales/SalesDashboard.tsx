@@ -10,7 +10,7 @@ import { SalesRecordings } from './SalesRecordings';
 export function SalesDashboard() {
   return (
     <div className="min-h-screen bg-background">
-      <DashboardHeader title="Sales Team Portal" bgColor="bg-[#27AE60]" />
+      <DashboardHeader title="Sales Team Portal" bgColor="bg-[#2C3E50]" />
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="entry" className="w-full">
           <TabsList className="mb-6">
