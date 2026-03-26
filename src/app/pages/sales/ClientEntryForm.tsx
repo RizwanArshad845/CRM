@@ -9,6 +9,8 @@ import { toast } from 'sonner';
 import { Save, Send, X } from 'lucide-react';
 import { cls } from '../../styles/classes';
 import { PRODUCTS, SERVICE_AREAS } from '../../data/mockData';
+import { useClientInbox } from '../../context/ClientInboxContext';
+import { useAuth } from '../../context/AuthContext';
 
 type FormData = {
   companyName: string; customerName: string; paymentAmount: string;
@@ -34,6 +36,8 @@ const TEXT_AREAS: { id: keyof FormData; label: string; placeholder: string }[] =
 
 export function ClientEntryForm() {
   const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
+  const { addInboxClient } = useClientInbox();
+  const { user } = useAuth();
 
   const set = (field: keyof FormData, value: string) =>
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -42,7 +46,25 @@ export function ClientEntryForm() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success('Client information submitted for review!');
+    if (!formData.companyName || !formData.customerName || !formData.productSold) {
+      toast.error('Please fill required fields (Company, Customer, Product)');
+      return;
+    }
+    addInboxClient({
+      companyName: formData.companyName,
+      customerName: formData.customerName,
+      paymentAmount: formData.paymentAmount,
+      productSold: formData.productSold,
+      email: formData.email,
+      serviceArea: formData.serviceArea,
+      contactNo1: formData.contactNo1,
+      contactNo2: formData.contactNo2,
+      clientConcerns: formData.clientConcerns,
+      tipsForTech: formData.tipsForTech,
+      notes: formData.notes,
+      submittedBy: user?.name ?? 'Sales Agent',
+    });
+    toast.success('Client submitted to CST Manager inbox!');
     setFormData(EMPTY_FORM);
   };
 

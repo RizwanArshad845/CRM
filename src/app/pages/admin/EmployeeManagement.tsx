@@ -34,7 +34,7 @@ export function EmployeeManagement() {
 
   const handleAdd = () => {
     const emp: Employee = {
-      id: Date.now().toString(),
+      id: Date.now(),
       name: form.name,
       employeeId: `EMP${String(employees.length + 1).padStart(3, '0')}`,
       email: form.email,

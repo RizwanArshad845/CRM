@@ -3,17 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Progress } from '../../components/ui/progress';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Target } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { TrendingUp, TrendingDown, ShoppingCart, Target, Pencil, Check } from 'lucide-react';
 import { StatCard } from '../../components/shared/StatCard';
 import { cls } from '../../styles/classes';
 import { useAuth } from '../../context/AuthContext';
-import {
-  MONTHLY_DATA, LAST_6_MONTHS, SALES_BY_AREA,
-  AGENT_TARGETS,
-} from '../../data/mockData';
+import { useAgentTargets } from '../../context/AgentTargetContext';
+import { MONTHLY_DATA } from '../../data/mockData';
 
 function pctColor(pct: number) {
   if (pct >= 90) return 'text-green-600';
@@ -21,71 +16,138 @@ function pctColor(pct: number) {
   return 'text-red-600';
 }
 
-const AGENT_NAMES = [...new Set(AGENT_TARGETS.map(t => t.agentName))];
-
 export function MonthlyTargets() {
   const { user } = useAuth();
-  const progressPct = Math.round((MONTHLY_DATA.revenueAchieved / MONTHLY_DATA.revenueTarget) * 100);
+  const { targets, updateAchieved } = useAgentTargets();
 
-  // Each agent sees only their own target history
-  const myTargets = AGENT_TARGETS.filter(t => t.agentName === user?.name);
+  // Inline edit state: targetId -> draft string value
+  const [editDrafts, setEditDrafts] = useState<Record<string, string>>({});
+
+  // Each agent sees only their own targets
+  const myTargets = targets.filter(t => t.agentName === user?.name);
+
+  // Find this month's personal target (if assigned)
+  const currentMonth = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
+  const myCurrentTarget = myTargets.find(t => t.month === currentMonth);
+
+  // Use personal target if available, fall back to global MONTHLY_DATA
+  const displayTarget = myCurrentTarget?.target ?? MONTHLY_DATA.revenueTarget;
+  const displayAchieved = myCurrentTarget?.achieved ?? MONTHLY_DATA.revenueAchieved;
+  const displayLeft = Math.max(0, displayTarget - displayAchieved);
+  const progressPct = displayTarget > 0 ? Math.min(100, Math.round((displayAchieved / displayTarget) * 100)) : 0;
+
+  const startEdit = (id: string, current: number) =>
+    setEditDrafts(prev => ({ ...prev, [id]: current > 0 ? String(current) : '' }));
+
+  const saveEdit = (id: string) => {
+    const val = Number(editDrafts[id]);
+    if (!isNaN(val) && val >= 0) updateAchieved(id, val);
+    setEditDrafts(prev => { const n = { ...prev }; delete n[id]; return n; });
+  };
 
   return (
     <div className={cls.page}>
+      {/* Stat Cards */}
       <div className={cls.gridResponsive2}>
-        <StatCard icon={<Target className="h-4 w-4 text-blue-500" />} title="Monthly Target" value={`$${MONTHLY_DATA.revenueTarget.toLocaleString()}`} subtitle="Revenue goal" />
-        <StatCard icon={<TrendingUp className="h-4 w-4 text-green-500" />} title="Achieved" value={`$${MONTHLY_DATA.revenueAchieved.toLocaleString()}`} subtitle={`${progressPct}% of target`} valueClassName="text-green-600" />
-        <StatCard icon={<TrendingDown className="h-4 w-4 text-orange-500" />} title="Remaining" value={`$${MONTHLY_DATA.revenueLeft.toLocaleString()}`} subtitle={`${100 - progressPct}% left`} valueClassName="text-orange-600" />
+        <StatCard icon={<Target className="h-4 w-4 text-blue-500" />} title="My Target" value={`$${displayTarget.toLocaleString()}`} subtitle={myCurrentTarget ? currentMonth : 'Team target'} />
+        <StatCard icon={<TrendingUp className="h-4 w-4 text-green-500" />} title="Achieved" value={`$${displayAchieved.toLocaleString()}`} subtitle={`${progressPct}% of target`} valueClassName="text-green-600" />
+        <StatCard icon={<TrendingDown className="h-4 w-4 text-orange-500" />} title="Remaining" value={`$${displayLeft.toLocaleString()}`} subtitle={`${100 - progressPct}% left`} valueClassName="text-orange-600" />
         <StatCard icon={<ShoppingCart className="h-4 w-4 text-purple-500" />} title="Total Sales" value={String(MONTHLY_DATA.totalSales)} subtitle="Deals closed" />
       </div>
 
+      {/* Progress Bar */}
       <Card>
         <CardHeader>
           <CardTitle>Monthly Revenue Progress</CardTitle>
-          <CardDescription>Progress towards the monthly revenue target</CardDescription>
+          <CardDescription>Progress towards your monthly target</CardDescription>
         </CardHeader>
         <CardContent>
           <div className={cls.list}>
             <div className={cls.row}>
               <span className={cls.label}>Progress</span>
-              <span className={cls.metric}>{progressPct}%</span>
+              <span className={`${cls.metric} ${pctColor(progressPct)}`}>{progressPct}%</span>
             </div>
             <Progress value={progressPct} className="h-4" />
           </div>
         </CardContent>
       </Card>
 
-      {/* My Target History — last 3 months + current */}
+      {/* My Target History — editable achieved */}
       <Card>
         <CardHeader>
-          <CardTitle>My Target History — Last 3 Months</CardTitle>
-          <CardDescription>Your personal monthly target vs achieved</CardDescription>
+          <CardTitle>My Target History</CardTitle>
+          <CardDescription>Update your achieved amount — Remaining adjusts automatically</CardDescription>
         </CardHeader>
         <CardContent>
           {myTargets.length === 0 ? (
-            <p className={cls.hint}>No target data found for your account.</p>
+            <p className={cls.hint}>No target assigned yet. Ask your Sales Manager to assign a target.</p>
           ) : (
             <div className="overflow-x-auto rounded-lg border">
               <table className="w-full text-sm">
                 <thead className="bg-muted/50">
                   <tr>
-                    {['Month', 'Target', 'Achieved', '% Hit'].map(h => (
+                    {['Month', 'Target', 'Achieved', 'Remaining', '% Hit', 'Update'].map(h => (
                       <th key={h} className={cls.tableHead}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y">
                   {myTargets.map(t => {
-                    const pct = t.target > 0 ? Math.round((t.achieved / t.target) * 100) : 0;
+                    const pct = t.target > 0 ? Math.min(100, Math.round((t.achieved / t.target) * 100)) : 0;
+                    const remaining = Math.max(0, t.target - t.achieved);
+                    const isEditing = t.id in editDrafts;
+
                     return (
                       <tr key={t.id} className={cls.tableRow}>
                         <td className={`${cls.tableCell} ${cls.heading}`}>{t.month}</td>
                         <td className={`${cls.tableCell} font-mono`}>${t.target.toLocaleString()}</td>
-                        <td className={`${cls.tableCell} font-mono`}>{t.achieved > 0 ? `$${t.achieved.toLocaleString()}` : <span className={cls.hint}>—</span>}</td>
+
+                        {/* Achieved — inline editable */}
+                        <td className={cls.tableCell}>
+                          {isEditing ? (
+                            <Input
+                              type="number"
+                              min="0"
+                              className="h-7 w-28 text-xs font-mono"
+                              value={editDrafts[t.id]}
+                              onChange={e => setEditDrafts(prev => ({ ...prev, [t.id]: e.target.value }))}
+                              onKeyDown={e => e.key === 'Enter' && saveEdit(t.id)}
+                              autoFocus
+                            />
+                          ) : (
+                            <span className="font-mono">
+                              {t.achieved > 0
+                                ? `$${t.achieved.toLocaleString()}`
+                                : <span className={cls.hint}>—</span>}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Remaining — auto calculated */}
+                        <td className={`${cls.tableCell} font-mono text-orange-600`}>
+                          {t.achieved > 0
+                            ? `$${remaining.toLocaleString()}`
+                            : <span className={cls.hint}>—</span>}
+                        </td>
+
+                        {/* % Hit */}
                         <td className={cls.tableCell}>
                           {t.achieved > 0
                             ? <span className={`font-bold ${pctColor(pct)}`}>{pct}%</span>
                             : <span className={cls.hint}>In progress</span>}
+                        </td>
+
+                        {/* Edit / Save button */}
+                        <td className={cls.tableCell}>
+                          {isEditing ? (
+                            <Button size="sm" onClick={() => saveEdit(t.id)} className="h-7 px-2">
+                              <Check className="h-3.5 w-3.5 mr-1" />Save
+                            </Button>
+                          ) : (
+                            <Button size="sm" variant="outline" onClick={() => startEdit(t.id, t.achieved)} className="h-7 px-2">
+                              <Pencil className="h-3.5 w-3.5 mr-1" />Update
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     );

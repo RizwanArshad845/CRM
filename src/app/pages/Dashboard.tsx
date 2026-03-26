@@ -6,6 +6,7 @@ import { SalesDashboard } from './sales/SalesDashboard';
 import { SalesManagerDashboard } from './sales-manager/SalesManagerDashboard';
 import { FinanceDashboard } from './finance/FinanceDashboard';
 import { CSTDashboard } from './cst/CSTDashboard';
+import { CSTManagerDashboard } from './cst-manager/CSTManagerDashboard';
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -39,6 +40,8 @@ export function Dashboard() {
       return <FinanceDashboard />;
     case 'cst':
       return <CSTDashboard />;
+    case 'cst_manager':
+      return <CSTManagerDashboard />;
     default:
       return <div>Unknown role</div>;
   }

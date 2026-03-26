@@ -1,0 +1,142 @@
+import { useState } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { Badge } from '../../components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
+import { Label } from '../../components/ui/label';
+import { UserCheck, CheckCircle2 } from 'lucide-react';
+import { cls } from '../../styles/classes';
+import { toast } from 'sonner';
+import { useClientInbox, type InboxClient } from '../../context/ClientInboxContext';
+import { CST_AGENTS } from '../../data/mockData';
+
+function statusBadge(status: InboxClient['status']) {
+    if (status === 'pending') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    if (status === 'assigned') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    return 'bg-blue-100 text-blue-700 border-blue-200';
+}
+
+export function InboxPanel() {
+    const { inboxClients, assignClient } = useClientInbox();
+    const pending = inboxClients.filter(c => c.status === 'pending');
+
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [selected, setSelected] = useState<InboxClient | null>(null);
+    const [agentId, setAgentId] = useState<number | null>(null);
+
+    const openAssign = (client: InboxClient) => {
+        setSelected(client);
+        setAgentId(null);
+        setDialogOpen(true);
+    };
+
+    const handleAssign = () => {
+        if (!agentId || !selected) { toast.error('Please select an agent'); return; }
+        const agent = CST_AGENTS.find(a => a.id === agentId);
+        assignClient(selected.id, agentId, agent?.name ?? '');
+        toast.success(`${selected.companyName} assigned to ${agent?.name}!`);
+        setDialogOpen(false);
+        setSelected(null);
+    };
+
+    return (
+        <div className={cls.page}>
+            <div className="flex items-center gap-3 mb-2">
+                <h2 className="text-lg font-semibold">Pending Client Submissions</h2>
+                <Badge className="bg-yellow-100 text-yellow-700 border border-yellow-200">
+                    {pending.length} pending
+                </Badge>
+            </div>
+
+            {pending.length === 0 ? (
+                <Card>
+                    <CardContent className="flex flex-col items-center py-12 gap-3 text-muted-foreground">
+                        <CheckCircle2 className="h-10 w-10 text-emerald-400" />
+                        <p className="font-medium">All clients have been reviewed!</p>
+                    </CardContent>
+                </Card>
+            ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {pending.map(client => (
+                        <Card key={client.id} className="border-2 hover:border-primary/40 transition-colors">
+                            <CardHeader className="pb-3">
+                                <div className={cls.row}>
+                                    <div>
+                                        <CardTitle className="text-base">{client.companyName}</CardTitle>
+                                        <CardDescription>{client.customerName}</CardDescription>
+                                    </div>
+                                    <Badge className={`border text-xs ${statusBadge(client.status)}`}>
+                                        {client.status}
+                                    </Badge>
+                                </div>
+                            </CardHeader>
+                            <CardContent className={cls.list}>
+                                <div className="grid grid-cols-2 gap-2 text-sm">
+                                    <div><p className={cls.hintXs}>Product</p><p className={cls.heading}>{client.productSold}</p></div>
+                                    <div><p className={cls.hintXs}>Payment</p><p className={cls.heading}>${Number(client.paymentAmount || 0).toLocaleString()}</p></div>
+                                    <div><p className={cls.hintXs}>Area</p><p className={cls.heading}>{client.serviceArea}</p></div>
+                                    <div><p className={cls.hintXs}>Submitted By</p><p className={cls.heading}>{client.submittedBy}</p></div>
+                                    <div><p className={cls.hintXs}>Contact</p><p className={cls.heading}>{client.contactNo1}</p></div>
+                                    <div><p className={cls.hintXs}>Date</p><p className={cls.heading}>{client.submittedDate}</p></div>
+                                </div>
+                                {client.clientConcerns && (
+                                    <div className={cls.muted}>
+                                        <p className={cls.hintXs}>Client Concerns</p>
+                                        <p className="text-sm mt-1">{client.clientConcerns}</p>
+                                    </div>
+                                )}
+                                {client.tipsForTech && (
+                                    <div className={`${cls.muted} bg-blue-50`}>
+                                        <p className={cls.hintXs}>Tips for Tech</p>
+                                        <p className="text-sm mt-1">{client.tipsForTech}</p>
+                                    </div>
+                                )}
+                                <Button className="w-full" onClick={() => openAssign(client)}>
+                                    <UserCheck className="h-4 w-4 mr-2" />Assign to CST Agent
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
+
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Assign Client to CST Agent</DialogTitle>
+                        <DialogDescription>
+                            {selected && `Assign ${selected.companyName} (${selected.customerName}) to a team member`}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className={cls.section}>
+                        {selected && (
+                            <div className={cls.muted}>
+                                <p className={cls.label}>{selected.companyName}</p>
+                                <p className={cls.hintXs}>Product: {selected.productSold} · Payment: ${Number(selected.paymentAmount || 0).toLocaleString()}</p>
+                                {selected.clientConcerns && <p className={`${cls.hintXs} mt-1`}>Concerns: {selected.clientConcerns}</p>}
+                            </div>
+                        )}
+                        <div className={cls.field}>
+                            <Label>Select CST Agent *</Label>
+                            <Select value={agentId !== null ? String(agentId) : ''} onValueChange={v => setAgentId(Number(v))}>
+                                <SelectTrigger><SelectValue placeholder="Choose an agent" /></SelectTrigger>
+                                <SelectContent>
+                                    {CST_AGENTS.map(a => (
+                                        <SelectItem key={a.id} value={String(a.id)}>
+                                            {a.name} — {a.role} ({a.currentClients} clients)
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+                        <Button onClick={handleAssign}><UserCheck className="h-4 w-4 mr-2" />Assign</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}

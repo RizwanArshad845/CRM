@@ -6,7 +6,7 @@ interface EmployeeContextType {
     employees: Employee[];
     addEmployee: (emp: Employee) => void;
     updateEmployee: (emp: Employee) => void;
-    deleteEmployee: (id: string) => void;
+    deleteEmployee: (id: number) => void;
 }
 
 const EmployeeContext = createContext<EmployeeContextType | undefined>(undefined);
@@ -16,7 +16,7 @@ export function EmployeeProvider({ children }: { children: ReactNode }) {
 
     const addEmployee = (emp: Employee) => setEmployees(prev => [...prev, emp]);
     const updateEmployee = (emp: Employee) => setEmployees(prev => prev.map(e => e.id === emp.id ? emp : e));
-    const deleteEmployee = (id: string) => setEmployees(prev => prev.filter(e => e.id !== id));
+    const deleteEmployee = (id: number) => setEmployees(prev => prev.filter(e => e.id !== id));
 
     return (
         <EmployeeContext.Provider value={{ employees, addEmployee, updateEmployee, deleteEmployee }}>

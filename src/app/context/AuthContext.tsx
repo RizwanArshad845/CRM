@@ -16,12 +16,13 @@ const SESSION_KEY = 'crm_clock_session';
 
 // Mock users for demonstration
 const mockUsers: User[] = [
-  { id: '1', name: 'Admin User', email: 'admin@company.com', role: 'admin', department: 'admin', clockedIn: false },
-  { id: '2', name: 'John Smith', email: 'john@company.com', role: 'sales', department: 'sales', clockedIn: false },
-  { id: '3', name: 'Robert Wilson', email: 'robert@company.com', role: 'finance', department: 'finance', clockedIn: false },
-  { id: '4', name: 'Emily Davis', email: 'emily@company.com', role: 'cst', department: 'cst', clockedIn: false },
-  { id: '5', name: 'Sarah Martinez', email: 'sarah@company.com', role: 'qa', department: 'qa', clockedIn: false },
-  { id: '6', name: 'Ahmed Khan', email: 'ahmed@company.com', role: 'sales_manager', department: 'sales', clockedIn: false },
+  { id: 1, name: 'Admin User', email: 'admin@company.com', role: 'admin', department: 'admin', clockedIn: false },
+  { id: 2, name: 'John Smith', email: 'john@company.com', role: 'sales', department: 'sales', clockedIn: false },
+  { id: 3, name: 'Robert Wilson', email: 'robert@company.com', role: 'finance', department: 'finance', clockedIn: false },
+  { id: 4, name: 'Emily Davis', email: 'emily@company.com', role: 'cst', department: 'cst', clockedIn: false },
+  { id: 5, name: 'Sarah Martinez', email: 'sarah@company.com', role: 'qa', department: 'qa', clockedIn: false },
+  { id: 6, name: 'Ahmed Khan', email: 'ahmed@company.com', role: 'sales_manager', department: 'sales', clockedIn: false },
+  { id: 7, name: 'Olivia Park', email: 'olivia@company.com', role: 'cst_manager', department: 'cst', clockedIn: false },
 ];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -47,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check if this user has a stale (never clocked-out) session in localStorage
     const raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
-      const saved = JSON.parse(raw) as { userId: string; name: string; clockInTime: string };
+      const saved = JSON.parse(raw) as { userId: number; name: string; clockInTime: string };
       if (saved.userId === foundUser.id) {
         setStaleSession({ name: saved.name, clockInTime: saved.clockInTime });
       }

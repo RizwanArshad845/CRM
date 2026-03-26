@@ -12,8 +12,9 @@ import { PerformanceReviews } from './PerformanceReviews';
 import { TaskDelegation } from './TaskDelegation';
 import {
   UPCOMING_EVENTS, MANAGER_PERFORMANCE, COMPANY_METRICS,
-  ACTIVE_CLIENTS, ONBOARDING_CLIENTS, MANAGER_TASK_METRICS,
+  ONBOARDING_CLIENTS, MANAGER_TASK_METRICS,
 } from '../../data/mockData';
+import { useClients } from '../../context/ClientContext';
 
 const EVENT_COLORS: Record<string, string> = {
   meeting: 'bg-blue-100 text-blue-800',
@@ -40,35 +41,30 @@ function healthColor(score: number) {
   return 'text-red-600';
 }
 
-// Active Clients tab — admin controls client active/inactive status
+// Active Clients tab — admin view-only (no activate/deactivate)
 function ActiveClientsPanel() {
-  const [activeClients, setActiveClients] = useState(
-    ACTIVE_CLIENTS.map(c => ({ ...c, isActive: true }))
-  );
+  const { clients } = useClients();
   const [onboardingClients] = useState(ONBOARDING_CLIENTS);
-
-  const toggleActive = (id: string) =>
-    setActiveClients(prev => prev.map(c => c.id === id ? { ...c, isActive: !c.isActive } : c));
 
   return (
     <div className={cls.page}>
       <Card>
         <CardHeader>
           <CardTitle className={cls.inline}><Globe className="h-5 w-5" />Active Clients</CardTitle>
-          <CardDescription>Manage client active/inactive status</CardDescription>
+          <CardDescription>View client active/inactive status</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto rounded-lg border">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
-                  {['Client', 'Health Score', 'Assigned Agent', 'Last Interaction', 'Next Check-In', 'Status', 'Action'].map(h => (
+                  {['Client', 'Health Score', 'Assigned Agent', 'Last Interaction', 'Next Check-In', 'Status'].map(h => (
                     <th key={h} className={cls.tableHead}>{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {activeClients.map(c => (
+                {clients.map(c => (
                   <tr key={c.id} className={cls.tableRow}>
                     <td className={`${cls.tableCell} ${cls.heading}`}>{c.name}</td>
                     <td className={cls.tableCell}>
@@ -78,12 +74,9 @@ function ActiveClientsPanel() {
                     <td className={`${cls.tableCell} ${cls.mono} text-xs`}>{c.lastInteraction}</td>
                     <td className={`${cls.tableCell} ${cls.mono} text-xs`}>{c.nextCheckIn}</td>
                     <td className={cls.tableCell}>
-                      <Badge variant={c.isActive ? 'default' : 'secondary'}>{c.isActive ? 'Active' : 'Inactive'}</Badge>
-                    </td>
-                    <td className={cls.tableCell}>
-                      <Button variant="outline" size="sm" onClick={() => toggleActive(c.id)}>
-                        {c.isActive ? 'Deactivate' : 'Activate'}
-                      </Button>
+                      <Badge variant={c.isActive ? 'default' : 'secondary'}>
+                        {c.isActive ? 'Active' : 'Inactive'}
+                      </Badge>
                     </td>
                   </tr>
                 ))}

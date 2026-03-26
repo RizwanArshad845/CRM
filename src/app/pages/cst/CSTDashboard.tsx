@@ -1,16 +1,32 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { Checkbox } from '../../components/ui/checkbox';
-import { Users, Calendar, Flag, Phone, Mail, UserPlus } from 'lucide-react';
+import {
+  Users, Calendar, Flag, Phone, Mail, UserPlus,
+  PowerOff, Power, AlertTriangle, CheckCircle2,
+} from 'lucide-react';
 import { DashboardHeader } from '../../components/shared/DashboardHeader';
 import { cls } from '../../styles/classes';
 import {
-  ACTIVE_CLIENTS, ONBOARDING_CLIENTS, FLAGGED_CLIENTS,
+  ONBOARDING_CLIENTS, FLAGGED_CLIENTS,
   DAILY_TASKS, SCHEDULED_CALLS, SCHEDULED_EMAILS, type FlagType,
 } from '../../data/mockData';
+import { useClients } from '../../context/ClientContext';
+import { useAuth } from '../../context/AuthContext';
+import { toast } from 'sonner';
+
+// ── Flag dialog (client selecton) ─────────────────────────────────────────────
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle,
+  DialogDescription, DialogFooter,
+} from '../../components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
+import { Label } from '../../components/ui/label';
+import { Input } from '../../components/ui/input';
 
 const PRIORITY_COLORS = {
   high: 'bg-red-100 text-red-800',
@@ -30,56 +46,260 @@ const FLAG_BORDER_COLORS: Record<FlagType, string> = {
   'black-flag': '#111827',
 };
 
+const FLAG_OPTIONS: { value: FlagType; label: string }[] = [
+  { value: 'red-flag', label: '🔴 Red Flag — Urgent issue' },
+  { value: 'yellow-flag', label: '🟡 Yellow Flag — Watch closely' },
+  { value: 'black-flag', label: '⚫ Black Flag — Churn / Cancel' },
+];
+
 function healthColor(score: number) {
   if (score >= 80) return 'text-green-600';
   if (score >= 60) return 'text-yellow-600';
   return 'text-red-600';
 }
 
+// ── Flag dialog (CST Agent only) ──────────────────────────────────────────────
+interface FlagDialogProps {
+  clientName: string;
+  clientId: string;
+  open: boolean;
+  onClose: () => void;
+}
+
+function FlagDialog({ clientName, open, onClose }: FlagDialogProps) {
+  const [flagType, setFlagType] = useState<FlagType>('yellow-flag');
+  const [issue, setIssue] = useState('');
+
+  const handleSubmit = () => {
+    if (!issue.trim()) { toast.error('Please describe the issue'); return; }
+    toast.success(`${clientName} flagged as "${flagType.replace('-', ' ')}" — CST Manager notified.`);
+    setIssue('');
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className={cls.inline}><Flag className="h-5 w-5 text-red-500" />Flag Client</DialogTitle>
+          <DialogDescription>Flagging <strong>{clientName}</strong> — this will notify the CST Manager.</DialogDescription>
+        </DialogHeader>
+        <div className={cls.section}>
+          <div className={cls.field}>
+            <Label>Flag Type</Label>
+            <Select value={flagType} onValueChange={v => setFlagType(v as FlagType)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {FLAG_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className={cls.field}>
+            <Label>Issue Description *</Label>
+            <Input placeholder="Describe the issue..." value={issue} onChange={e => setIssue(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button variant="destructive" onClick={handleSubmit}><Flag className="h-4 w-4 mr-2" />Submit Flag</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ── Active Clients panel (role-aware) ─────────────────────────────────────────
+function ActiveClientsPanel() {
+  const { user } = useAuth();
+  const { clients, deactivationRequests, toggleActive, requestDeactivation, resolveDeactivationRequest } = useClients();
+  const isCSTManager = user?.role === 'cst_manager';
+  const isCSTAgent   = user?.role === 'cst';
+
+  const [flagTarget, setFlagTarget] = useState<{ id: string; name: string } | null>(null);
+
+  const handleRequestDeactivation = (clientId: string, clientName: string) => {
+    if (!user) return;
+    requestDeactivation(clientId, clientName, user.name);
+    toast.info(`Deactivation request for "${clientName}" sent to CST Manager.`);
+  };
+
+  return (
+    <div className={cls.section}>
+      {/* Active Clients */}
+      <Card>
+        <CardHeader>
+          <CardTitle className={cls.inline}>
+            <div className="h-3 w-3 rounded-full bg-green-500" />
+            Active Clients
+          </CardTitle>
+          <CardDescription>
+            {isCSTManager
+              ? 'Activate or deactivate clients'
+              : isCSTAgent
+              ? 'Flag clients or request deactivation'
+              : `${clients.filter(c => c.isActive).length} currently active clients`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className={cls.list}>
+          {clients.map(c => (
+            <div
+              key={c.id}
+              className={`${cls.itemHover} ${!c.isActive ? 'opacity-60' : ''}`}
+            >
+              <div className={`${cls.row} mb-2 flex-wrap gap-2`}>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <h4 className={cls.heading}>{c.name}</h4>
+                  <Badge variant={c.isActive ? 'default' : 'secondary'} className="text-xs">
+                    {c.isActive ? 'Active' : 'Inactive'}
+                  </Badge>
+                  {deactivationRequests.some(r => r.clientId === c.id) && (
+                    <Badge variant="outline" className="text-xs text-yellow-700 border-yellow-400 bg-yellow-50">
+                      <AlertTriangle className="h-3 w-3 mr-1" />Deactivation Requested
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm mb-3">
+                {[
+                  { label: 'Last Interaction', value: new Date(c.lastInteraction).toLocaleDateString() },
+                  { label: 'Next Check-in', value: new Date(c.nextCheckIn).toLocaleDateString() },
+                  { label: 'Assigned Agent', value: c.assignedAgent },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <p className={cls.hint}>{label}</p>
+                    <p className={cls.heading}>{value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* CST Manager: activate / deactivate */}
+              {isCSTManager && (
+                <div className={`${cls.actions} flex-wrap`}>
+                  <Button
+                    size="sm"
+                    variant={c.isActive ? 'destructive' : 'default'}
+                    onClick={() => {
+                      toggleActive(c.id);
+                      toast.success(`${c.name} ${c.isActive ? 'deactivated' : 'activated'}.`);
+                    }}
+                  >
+                    {c.isActive
+                      ? <><PowerOff className="h-3.5 w-3.5 mr-1.5" />Deactivate</>
+                      : <><Power className="h-3.5 w-3.5 mr-1.5" />Activate</>}
+                  </Button>
+                </div>
+              )}
+
+              {/* CST Agent: flag + request deactivation */}
+              {isCSTAgent && (
+                <div className={`${cls.actions} flex-wrap`}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-orange-400 text-orange-700 hover:bg-orange-50"
+                    onClick={() => setFlagTarget({ id: c.id, name: c.name })}
+                  >
+                    <Flag className="h-3.5 w-3.5 mr-1.5" />Flag
+                  </Button>
+                  {c.isActive && !deactivationRequests.some(r => r.clientId === c.id) && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="border-red-400 text-red-700 hover:bg-red-50"
+                      onClick={() => handleRequestDeactivation(c.id, c.name)}
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />Request Deactivation
+                    </Button>
+                  )}
+                  {deactivationRequests.some(r => r.clientId === c.id) && (
+                    <span className={`${cls.hintXs} text-yellow-700`}>Deactivation request pending…</span>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Pending Deactivation Requests — CST Manager only */}
+      {isCSTManager && deactivationRequests.length > 0 && (
+        <Card className="border-2 border-yellow-300 dark:border-yellow-700">
+          <CardHeader>
+            <CardTitle className={`${cls.inline} text-yellow-700 dark:text-yellow-400`}>
+              <AlertTriangle className="h-5 w-5" />
+              Pending Deactivation Requests
+            </CardTitle>
+            <CardDescription>Requests submitted by CST agents — review and approve or dismiss</CardDescription>
+          </CardHeader>
+          <CardContent className={cls.list}>
+            {deactivationRequests.map(req => (
+              <div key={req.clientId} className={`${cls.item} border-yellow-200 dark:border-yellow-800`}>
+                <div className={`${cls.row} mb-3 flex-wrap gap-2`}>
+                  <div>
+                    <p className={cls.heading}>{req.clientName}</p>
+                    <p className={cls.hint}>
+                      Requested by <strong>{req.requestedBy}</strong> · {new Date(req.requestedAt).toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+                <div className={`${cls.actions} flex-wrap`}>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => {
+                      resolveDeactivationRequest(req.clientId, true);
+                      toast.success(`${req.clientName} has been deactivated.`);
+                    }}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Approve &amp; Deactivate
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      resolveDeactivationRequest(req.clientId, false);
+                      toast.info(`Request for ${req.clientName} dismissed.`);
+                    }}
+                  >
+                    Dismiss
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Flag dialog */}
+      {flagTarget && (
+        <FlagDialog
+          clientId={flagTarget.id}
+          clientName={flagTarget.name}
+          open={!!flagTarget}
+          onClose={() => setFlagTarget(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Main dashboard ────────────────────────────────────────────────────────────
 export function CSTDashboard() {
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader title="Customer Success Team Portal" bgColor="bg-[#2C3E50]" />
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="clients" className="w-full">
-          <TabsList className="mb-6">
+          <TabsList className="mb-6 flex-wrap h-auto gap-1">
             <TabsTrigger value="clients"><Users className="h-4 w-4 mr-2" />Client Management</TabsTrigger>
             <TabsTrigger value="schedule"><Calendar className="h-4 w-4 mr-2" />Daily Schedule</TabsTrigger>
           </TabsList>
 
           {/* Client Management */}
           <TabsContent value="clients" className={cls.page}>
-            {/* Active Clients */}
-            <Card>
-              <CardHeader>
-                <CardTitle className={cls.inline}>
-                  <div className="h-3 w-3 rounded-full bg-green-500" />Active Clients
-                </CardTitle>
-                <CardDescription>{ACTIVE_CLIENTS.length} currently active clients</CardDescription>
-              </CardHeader>
-              <CardContent className={cls.list}>
-                {ACTIVE_CLIENTS.map(c => (
-                  <div key={c.id} className={cls.itemHover}>
-                    <div className={`${cls.row} mb-2`}>
-                      <h4 className={cls.heading}>{c.name}</h4>
-                      <div className={`${cls.metric} ${healthColor(c.healthScore)}`}>{c.healthScore}</div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      {[
-                        { label: 'Last Interaction', value: new Date(c.lastInteraction).toLocaleDateString() },
-                        { label: 'Next Check-in', value: new Date(c.nextCheckIn).toLocaleDateString() },
-                        { label: 'Assigned Agent', value: c.assignedAgent },
-                      ].map(({ label, value }) => (
-                        <div key={label}>
-                          <p className={cls.hint}>{label}</p>
-                          <p className={cls.heading}>{value}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+            {/* Active Clients (role-gated) */}
+            <ActiveClientsPanel />
 
             {/* Onboarding */}
             <Card>
@@ -147,7 +367,7 @@ export function CSTDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Daily Tasks */}
               <Card>
-                <CardHeader><CardTitle>Daily Tasks</CardTitle><CardDescription>Today's checklist</CardDescription></CardHeader>
+                <CardHeader><CardTitle>Daily Tasks</CardTitle><CardDescription>Today&apos;s checklist</CardDescription></CardHeader>
                 <CardContent className={cls.list}>
                   {DAILY_TASKS.map(task => (
                     <div key={task.id} className={`${cls.inline} ${cls.itemSm}`}>
@@ -169,7 +389,7 @@ export function CSTDashboard() {
               <Card>
                 <CardHeader>
                   <CardTitle className={cls.inline}><Phone className="h-5 w-5" />Scheduled Calls</CardTitle>
-                  <CardDescription>Today's call schedule</CardDescription>
+                  <CardDescription>Today&apos;s call schedule</CardDescription>
                 </CardHeader>
                 <CardContent className={cls.list}>
                   {SCHEDULED_CALLS.map(call => (
@@ -203,7 +423,7 @@ export function CSTDashboard() {
                         <p className={cls.hint}>To: {email.clientName}</p>
                         <p className={`${cls.hintXs} mt-1`}>Template: {email.template}</p>
                       </div>
-                      <div className={`${cls.inline}`}>
+                      <div className={cls.inline}>
                         <div className="text-right">
                           <p className={cls.label}>{email.scheduledTime}</p>
                           <Badge variant={email.status === 'sent' ? 'default' : 'outline'}>{email.status}</Badge>

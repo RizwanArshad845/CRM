@@ -4,160 +4,190 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
-import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { UserPlus, Send } from 'lucide-react';
+import { Send, ShieldCheck, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { cls } from '../../styles/classes';
-import { CST_MEMBERS, SALES_LEADS } from '../../data/mockData';
+import { useManagerTasks, type TaskPriority } from '../../context/ManagerTaskContext';
+import { useCSTManagerTasks, type CSTTaskPriority } from '../../context/CSTManagerTaskContext';
 
-type Lead = typeof SALES_LEADS[0];
-const EMPTY_FORM = { leadId: '', assignedTo: '', priority: 'medium', dueDate: '', notes: '' };
+// ── Shared constants ──────────────────────────────────────────────────────────
+const MGR_CATEGORIES = ['Management', 'Sales', 'Report', 'HR', 'Admin', 'Coaching', 'Strategy', 'Other'];
+const CST_CATEGORIES = ['Management', 'Onboarding', 'Escalation', 'Client', 'Report', 'Admin', 'QA', 'Other'];
 
-const LEAD_DETAIL_KEYS: { label: string; key: keyof Lead }[] = [
-  { label: 'Payment', key: 'paymentAmount' },
-  { label: 'Product', key: 'productSold' },
-  { label: 'Area', key: 'serviceArea' },
-  { label: 'Contact', key: 'contactNo1' },
-  { label: 'Submitted By', key: 'submittedBy' },
-];
+// ── Admin → Sales Manager task card ──────────────────────────────────────────
+const EMPTY_MGR_TASK = { title: '', priority: 'medium' as TaskPriority, dueDate: '', category: 'Management', notes: '' };
 
-export function TaskDelegation() {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
-  const [form, setForm] = useState(EMPTY_FORM);
+function AssignToSalesManagerPanel() {
+  const { addTask } = useManagerTasks();
+  const [form, setForm] = useState(EMPTY_MGR_TASK);
 
-  const set = (k: keyof typeof EMPTY_FORM, v: string) => setForm(prev => ({ ...prev, [k]: v }));
+  const set = <K extends keyof typeof EMPTY_MGR_TASK>(k: K, v: (typeof EMPTY_MGR_TASK)[K]) =>
+    setForm(prev => ({ ...prev, [k]: v }));
 
   const handleAssign = () => {
-    if (!form.assignedTo || !form.dueDate) { toast.error('Please fill all required fields'); return; }
-    const member = CST_MEMBERS.find(m => m.id === form.assignedTo);
-    toast.success(`Task assigned to ${member?.name}!`);
-    setIsOpen(false);
-    setSelectedLead(null);
-    setForm(EMPTY_FORM);
-  };
-
-  const openDialog = (lead: Lead) => {
-    setSelectedLead(lead);
-    setForm({ ...EMPTY_FORM, leadId: lead.id });
-    setIsOpen(true);
+    if (!form.title.trim() || !form.dueDate) {
+      toast.error('Please fill in title and due date');
+      return;
+    }
+    addTask({ ...form, status: 'pending', assignedBy: 'admin' });
+    toast.success('Task assigned to Sales Manager!');
+    setForm(EMPTY_MGR_TASK);
   };
 
   return (
-    <Card>
+    <Card className="border-2 border-blue-200 dark:border-blue-800">
       <CardHeader>
-        <CardTitle>Task Delegation to CST Team</CardTitle>
-        <CardDescription>Assign new leads from Sales to CST members</CardDescription>
+        <CardTitle className={`${cls.inline} text-blue-700 dark:text-blue-400`}>
+          <ShieldCheck className="h-5 w-5" />
+          Assign Task to Sales Manager
+        </CardTitle>
+        <CardDescription>Add a task directly to the Sales Manager&apos;s board</CardDescription>
       </CardHeader>
-      <CardContent className={cls.page}>
-        {/* CST Workload */}
-        <div>
-          <h3 className={`${cls.heading} mb-3`}>CST Team Workload</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {CST_MEMBERS.map(m => (
-              <div key={m.id} className={cls.item}>
-                <h4 className={cls.heading}>{m.name}</h4>
-                <p className={cls.hint}>{m.role}</p>
-                <div className="mt-2">
-                  <Badge variant={m.currentTasks > 7 ? 'destructive' : 'outline'}>{m.currentTasks} active tasks</Badge>
-                </div>
-              </div>
-            ))}
+      <CardContent>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`${cls.field} sm:col-span-2`}>
+            <Label>Task Title *</Label>
+            <Input
+              placeholder="e.g. Submit Q2 forecast"
+              value={form.title}
+              onChange={e => set('title', e.target.value)}
+            />
+          </div>
+          <div className={cls.field}>
+            <Label>Priority</Label>
+            <Select value={form.priority} onValueChange={v => set('priority', v as TaskPriority)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className={cls.field}>
+            <Label>Category</Label>
+            <Select value={form.category} onValueChange={v => set('category', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {MGR_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className={cls.field}>
+            <Label>Due Date *</Label>
+            <Input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
+          </div>
+          <div className={`${cls.field} sm:col-span-2 lg:col-span-3`}>
+            <Label>Notes</Label>
+            <Textarea
+              rows={2}
+              placeholder="Instructions for the Sales Manager..."
+              value={form.notes}
+              onChange={e => set('notes', e.target.value)}
+            />
           </div>
         </div>
-
-        {/* Pending Leads */}
-        <div>
-          <h3 className={`${cls.heading} mb-3`}>Pending Sales Leads</h3>
-          <div className={cls.list}>
-            {SALES_LEADS.map(lead => (
-              <Card key={lead.id} className="border-2">
-                <CardHeader className="pb-3">
-                  <div className={cls.row}>
-                    <div>
-                      <h4 className={cls.heading}>{lead.companyName}</h4>
-                      <p className={cls.hint}>Contact: {lead.customerName}</p>
-                    </div>
-                    <Badge variant="outline">{lead.status}</Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className={cls.list}>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                    {LEAD_DETAIL_KEYS.map(({ label, key }) => (
-                      <div key={label}>
-                        <p className={cls.hint}>{label}</p>
-                        <p className={cls.heading}>
-                          {key === 'paymentAmount' ? `$${(lead[key] as number).toLocaleString()}` : String(lead[key])}
-                        </p>
-                      </div>
-                    ))}
-                    <div>
-                      <p className={cls.hint}>Date</p>
-                      <p className={cls.heading}>{new Date(lead.submittedDate).toLocaleDateString()}</p>
-                    </div>
-                  </div>
-                  <Button className="w-full" onClick={() => openDialog(lead)}>
-                    <UserPlus className="h-4 w-4 mr-2" />Assign to CST Member
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Assignment Dialog */}
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Assign Task to CST Member</DialogTitle>
-              <DialogDescription>{selectedLead && `Assign ${selectedLead.companyName} to a CST team member`}</DialogDescription>
-            </DialogHeader>
-            {selectedLead && (
-              <div className={cls.section}>
-                <div className={cls.muted}>
-                  <p className={cls.label}>{selectedLead.companyName}</p>
-                  <p className={cls.hintXs}>Contact: {selectedLead.customerName}</p>
-                  <p className={cls.hintXs}>Product: {selectedLead.productSold}</p>
-                </div>
-                <div className={cls.field}>
-                  <Label>Assign To *</Label>
-                  <Select value={form.assignedTo} onValueChange={v => set('assignedTo', v)}>
-                    <SelectTrigger><SelectValue placeholder="Select CST member" /></SelectTrigger>
-                    <SelectContent>
-                      {CST_MEMBERS.map(m => <SelectItem key={m.id} value={m.id}>{m.name} ({m.currentTasks} tasks)</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className={cls.field}>
-                  <Label>Priority</Label>
-                  <Select value={form.priority} onValueChange={v => set('priority', v)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className={cls.field}>
-                  <Label>Due Date *</Label>
-                  <Input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
-                </div>
-                <div className={cls.field}>
-                  <Label>Additional Notes</Label>
-                  <Textarea rows={3} placeholder="Special instructions..." value={form.notes} onChange={e => set('notes', e.target.value)} />
-                </div>
-              </div>
-            )}
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsOpen(false)}>Cancel</Button>
-              <Button onClick={handleAssign}><Send className="h-4 w-4 mr-2" />Assign</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        <Button className="mt-4" onClick={handleAssign}>
+          <Send className="h-4 w-4 mr-2" />
+          Assign to Sales Manager
+        </Button>
       </CardContent>
     </Card>
+  );
+}
+
+// ── Admin → CST Manager task card ────────────────────────────────────────────
+const EMPTY_CST_TASK = { title: '', priority: 'medium' as CSTTaskPriority, dueDate: '', category: 'Management', notes: '' };
+
+function AssignToCSTManagerPanel() {
+  const { addTask } = useCSTManagerTasks();
+  const [form, setForm] = useState(EMPTY_CST_TASK);
+
+  const set = <K extends keyof typeof EMPTY_CST_TASK>(k: K, v: (typeof EMPTY_CST_TASK)[K]) =>
+    setForm(prev => ({ ...prev, [k]: v }));
+
+  const handleAssign = () => {
+    if (!form.title.trim() || !form.dueDate) {
+      toast.error('Please fill in title and due date');
+      return;
+    }
+    addTask({ ...form, status: 'pending', assignedBy: 'admin' });
+    toast.success('Task assigned to CST Manager!');
+    setForm(EMPTY_CST_TASK);
+  };
+
+  return (
+    <Card className="border-2 border-emerald-200 dark:border-emerald-800">
+      <CardHeader>
+        <CardTitle className={`${cls.inline} text-emerald-700 dark:text-emerald-400`}>
+          <Users className="h-5 w-5" />
+          Assign Task to CST Manager
+        </CardTitle>
+        <CardDescription>Add a task directly to the CST Manager&apos;s board</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className={`${cls.field} sm:col-span-2`}>
+            <Label>Task Title *</Label>
+            <Input
+              placeholder="e.g. Monthly client health audit"
+              value={form.title}
+              onChange={e => set('title', e.target.value)}
+            />
+          </div>
+          <div className={cls.field}>
+            <Label>Priority</Label>
+            <Select value={form.priority} onValueChange={v => set('priority', v as CSTTaskPriority)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="high">High</SelectItem>
+                <SelectItem value="medium">Medium</SelectItem>
+                <SelectItem value="low">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className={cls.field}>
+            <Label>Category</Label>
+            <Select value={form.category} onValueChange={v => set('category', v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {CST_CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className={cls.field}>
+            <Label>Due Date *</Label>
+            <Input type="date" value={form.dueDate} onChange={e => set('dueDate', e.target.value)} />
+          </div>
+          <div className={`${cls.field} sm:col-span-2 lg:col-span-3`}>
+            <Label>Notes</Label>
+            <Textarea
+              rows={2}
+              placeholder="Instructions for the CST Manager..."
+              value={form.notes}
+              onChange={e => set('notes', e.target.value)}
+            />
+          </div>
+        </div>
+        <Button
+          className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white"
+          onClick={handleAssign}
+        >
+          <Send className="h-4 w-4 mr-2" />
+          Assign to CST Manager
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+export function TaskDelegation() {
+  return (
+    <div className={cls.page}>
+      <AssignToSalesManagerPanel />
+      <AssignToCSTManagerPanel />
+    </div>
   );
 }

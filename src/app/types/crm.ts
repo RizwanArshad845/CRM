@@ -1,17 +1,17 @@
 export interface Task {
-  id: string;
+  id: number;
   title: string;
   description: string;
   status: 'pending' | 'in-progress' | 'completed';
   priority: 'low' | 'medium' | 'high';
-  assignedTo: string;
+  assignedTo: number;
   department: string;
   dueDate: string;
   details?: Record<string, any>;
 }
 
 export interface Department {
-  id: string;
+  id: number;
   name: string;
   userCount: string;
   color: string;
@@ -19,7 +19,7 @@ export interface Department {
 }
 
 export interface TeamMember {
-  id: string;
+  id: number;
   name: string;
   role: string;
   department: string;
@@ -28,10 +28,10 @@ export interface TeamMember {
 }
 
 export interface User {
-  id: string;
+  id: number;
   name: string;
   email: string;
-  role: 'admin' | 'sales' | 'sales_manager' | 'finance' | 'cst' | 'qa';
+  role: 'admin' | 'sales' | 'sales_manager' | 'finance' | 'cst' | 'cst_manager' | 'qa';
   department: string;
   clockedIn: boolean;
   clockInTime?: string;
@@ -40,8 +40,8 @@ export interface User {
 }
 
 export interface AttendanceRecord {
-  id: string;
-  userId: string;
+  id: number;
+  userId: number;
   date: string;
   clockIn: string;
   clockOut?: string;
@@ -58,7 +58,7 @@ export interface Event {
 }
 
 export interface SalesClient {
-  id: string;
+  id: number;
   companyName: string;
   customerName: string;
   paymentAmount: number;
@@ -85,7 +85,7 @@ export interface SalesClient {
 }
 
 export interface SalesAgent {
-  id: string;
+  id: number;
   name: string;
   behaviorRating: number;
   floorTrainingStatus: 'completed' | 'in-progress' | 'pending';
@@ -96,7 +96,7 @@ export interface SalesAgent {
 }
 
 export interface CallRecording {
-  id: string;
+  id: number;
   agentName: string;
   clientName: string;
   date: string;
@@ -107,7 +107,7 @@ export interface CallRecording {
 }
 
 export interface Employee {
-  id: string;
+  id: number;
   name: string;
   employeeId: string;
   email: string;
@@ -124,7 +124,7 @@ export interface Employee {
 }
 
 export interface TechClient {
-  id: string;
+  id: number;
   name: string;
   status: 'active' | 'onboarding' | 'on-hold' | 'completed';
   lastUpdated: string;
@@ -151,7 +151,7 @@ export interface TechClient {
 }
 
 export interface CSTClient {
-  id: string;
+  id: number;
   name: string;
   type: 'active' | 'onboarding' | 'red-flag' | 'yellow-flag' | 'black-flag';
   healthScore?: number;
@@ -167,16 +167,16 @@ export interface CSTClient {
 }
 
 export interface DailyTask {
-  id: string;
+  id: number;
   title: string;
   priority: 'high' | 'medium' | 'low';
   status: 'todo' | 'in-progress' | 'done';
   dueTime?: string;
-  assignedTo: string;
+  assignedTo: number;
 }
 
 export interface ScheduledCall {
-  id: string;
+  id: number;
   clientName: string;
   purpose: string;
   time: string;
@@ -185,7 +185,7 @@ export interface ScheduledCall {
 }
 
 export interface ScheduledEmail {
-  id: string;
+  id: number;
   clientName: string;
   subject: string;
   scheduledTime: string;
@@ -194,7 +194,7 @@ export interface ScheduledEmail {
 }
 
 export interface Meeting {
-  id: string;
+  id: number;
   title: string;
   attendees: string[];
   time: string;
@@ -204,7 +204,7 @@ export interface Meeting {
 }
 
 export interface ManagerTaskMetrics {
-  id: string;
+  id: number;
   managerName: string;
   department: string;
   totalTasks: number;
@@ -214,7 +214,7 @@ export interface ManagerTaskMetrics {
 }
 
 export interface QAEvaluation {
-  id: string;
+  id: number;
   clientName: string;
   agentName: string;
   evaluationType: 'cst-client' | 'agent' | 'call';
@@ -224,8 +224,8 @@ export interface QAEvaluation {
 }
 
 export interface SalesCallNote {
-  id: string;
-  callId: string;
+  id: number;
+  callId: number;
   agentName: string;
   clientName: string;
   notes: string;

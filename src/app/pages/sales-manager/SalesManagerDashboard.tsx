@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { TrendingUp, Users, PhoneCall, Target, Mic } from 'lucide-react';
+import { TrendingUp, Users, PhoneCall, Target, Mic, ClipboardCheck } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -11,8 +11,10 @@ import { cls } from '../../styles/classes';
 import { AgentPerformance } from '../sales/AgentPerformance';
 import { SalesRecordings } from '../sales/SalesRecordings';
 import { FollowUpLeads } from '../sales/FollowUpLeads';
-import { AGENT_TARGETS, type AgentTarget } from '../../data/mockData';
+import { ManagerTaskBoard } from './ManagerTaskBoard';
 import { INITIAL_AGENTS } from '../../data/mockData';
+import { AGENT_TARGETS } from '../../data/mockData';
+import { useAgentTargets } from '../../context/AgentTargetContext';
 import { toast } from 'sonner';
 
 const ALL_AGENT_NAMES = [...new Set(AGENT_TARGETS.map(t => t.agentName))];
@@ -24,18 +26,15 @@ function pctColor(pct: number) {
 }
 
 function TargetsOverview() {
-    const [targets, setTargets] = useState<AgentTarget[]>(AGENT_TARGETS);
+    const { targets, assignTarget } = useAgentTargets();
     const [assignAgent, setAssignAgent] = useState('');
     const [assignAmount, setAssignAmount] = useState('');
 
+    const ALL_AGENT_NAMES = [...new Set(AGENT_TARGETS.map(t => t.agentName))];
+
     const handleAssign = () => {
         if (!assignAgent || !assignAmount) { toast.error('Select an agent and enter a target amount'); return; }
-        const month = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        setTargets(prev => {
-            const exists = prev.find(t => t.agentName === assignAgent && t.month === month);
-            if (exists) return prev.map(t => t.agentName === assignAgent && t.month === month ? { ...t, target: Number(assignAmount) } : t);
-            return [...prev, { id: Date.now().toString(), agentId: '', agentName: assignAgent, month, target: Number(assignAmount), achieved: 0 }];
-        });
+        assignTarget(assignAgent, '', Number(assignAmount));
         toast.success(`Target of $${Number(assignAmount).toLocaleString()} assigned to ${assignAgent}`);
         setAssignAgent(''); setAssignAmount('');
     };
@@ -119,11 +118,13 @@ export function SalesManagerDashboard() {
                         <TabsTrigger value="followup"><PhoneCall className="h-4 w-4 mr-2" />Follow-Ups</TabsTrigger>
                         <TabsTrigger value="performance"><Users className="h-4 w-4 mr-2" />Agent Performance</TabsTrigger>
                         <TabsTrigger value="recordings"><Mic className="h-4 w-4 mr-2" />Recordings</TabsTrigger>
+                        <TabsTrigger value="mytasks"><ClipboardCheck className="h-4 w-4 mr-2" />My Tasks</TabsTrigger>
                     </TabsList>
                     <TabsContent value="targets"><TargetsOverview /></TabsContent>
                     <TabsContent value="followup"><FollowUpLeads /></TabsContent>
                     <TabsContent value="performance"><AgentPerformance /></TabsContent>
                     <TabsContent value="recordings"><SalesRecordings /></TabsContent>
+                    <TabsContent value="mytasks"><ManagerTaskBoard /></TabsContent>
                 </Tabs>
             </main>
         </div>

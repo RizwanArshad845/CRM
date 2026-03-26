@@ -21,19 +21,19 @@ export const DEPARTMENTS = ['Sales', 'CST', 'Finance', 'QA', 'Admin'];
 
 // ─── Employees (shared between Admin EmployeeManagement & Finance) ────────────
 export const INITIAL_EMPLOYEES: Employee[] = [
-    { id: '1', name: 'John Smith', employeeId: 'EMP001', email: 'john@nexuswave.com', department: 'Sales', role: 'Sales Manager', isActive: true, baseSalary: 5000, advancePayments: 500, accruedPayments: 200, totalSalary: 4700, paymentStatus: 'paid', hireDate: '2024-01-15', tardies: 2 },
-    { id: '2', name: 'Sarah Johnson', employeeId: 'EMP002', email: 'sarah.j@nexuswave.com', department: 'Sales', role: 'Sales Agent', isActive: true, baseSalary: 4800, advancePayments: 0, accruedPayments: 300, totalSalary: 5100, paymentStatus: 'pending', hireDate: '2024-01-20', tardies: 0 },
-    { id: '3', name: 'Mike Chen', employeeId: 'EMP003', email: 'mike@nexuswave.com', department: 'CST', role: 'CST Agent', isActive: true, baseSalary: 4200, advancePayments: 300, accruedPayments: 150, totalSalary: 4050, paymentStatus: 'paid', hireDate: '2024-02-01', tardies: 1 },
-    { id: '4', name: 'Emily Davis', employeeId: 'EMP004', email: 'emily@nexuswave.com', department: 'CST', role: 'CST Lead', isActive: true, baseSalary: 4500, advancePayments: 200, accruedPayments: 250, totalSalary: 4550, paymentStatus: 'partial', hireDate: '2024-02-01', tardies: 0 },
-    { id: '5', name: 'Robert Wilson', employeeId: 'EMP005', email: 'robert@nexuswave.com', department: 'Finance', role: 'Finance Manager', isActive: true, baseSalary: 6000, advancePayments: 0, accruedPayments: 400, totalSalary: 6400, paymentStatus: 'pending', hireDate: '2023-11-10', tardies: 1 },
-    { id: '6', name: 'Sarah Martinez', employeeId: 'EMP006', email: 'sarah@nexuswave.com', department: 'QA', role: 'QA Specialist', isActive: true, baseSalary: 4800, advancePayments: 0, accruedPayments: 300, totalSalary: 5100, paymentStatus: 'paid', hireDate: '2024-01-20', tardies: 0 },
+    { id: 1, name: 'John Smith', employeeId: 'EMP001', email: 'john@nexuswave.com', department: 'Sales', role: 'Sales Manager', isActive: true, baseSalary: 5000, advancePayments: 500, accruedPayments: 200, totalSalary: 4700, paymentStatus: 'paid', hireDate: '2024-01-15', tardies: 2 },
+    { id: 2, name: 'Sarah Johnson', employeeId: 'EMP002', email: 'sarah.j@nexuswave.com', department: 'Sales', role: 'Sales Agent', isActive: true, baseSalary: 4800, advancePayments: 0, accruedPayments: 300, totalSalary: 5100, paymentStatus: 'pending', hireDate: '2024-01-20', tardies: 0 },
+    { id: 3, name: 'Mike Chen', employeeId: 'EMP003', email: 'mike@nexuswave.com', department: 'CST', role: 'CST Agent', isActive: true, baseSalary: 4200, advancePayments: 300, accruedPayments: 150, totalSalary: 4050, paymentStatus: 'paid', hireDate: '2024-02-01', tardies: 1 },
+    { id: 4, name: 'Emily Davis', employeeId: 'EMP004', email: 'emily@nexuswave.com', department: 'CST', role: 'CST Lead', isActive: true, baseSalary: 4500, advancePayments: 200, accruedPayments: 250, totalSalary: 4550, paymentStatus: 'partial', hireDate: '2024-02-01', tardies: 0 },
+    { id: 5, name: 'Robert Wilson', employeeId: 'EMP005', email: 'robert@nexuswave.com', department: 'Finance', role: 'Finance Manager', isActive: true, baseSalary: 6000, advancePayments: 0, accruedPayments: 400, totalSalary: 6400, paymentStatus: 'pending', hireDate: '2023-11-10', tardies: 1 },
+    { id: 6, name: 'Sarah Martinez', employeeId: 'EMP006', email: 'sarah@nexuswave.com', department: 'QA', role: 'QA Specialist', isActive: true, baseSalary: 4800, advancePayments: 0, accruedPayments: 300, totalSalary: 5100, paymentStatus: 'paid', hireDate: '2024-01-20', tardies: 0 },
 ];
 
 // ─── Agent Performance ────────────────────────────────────────────────────────
 export type TrainingStatus = 'completed' | 'in-progress' | 'pending';
 
 export interface Agent {
-    id: string;
+    id: number;
     name: string;
     behaviorRating: number;
     floorTrainingStatus: TrainingStatus;
@@ -44,18 +44,18 @@ export interface Agent {
 }
 
 export const INITIAL_AGENTS: Agent[] = [
-    { id: '1', name: 'John Smith', behaviorRating: 4.5, floorTrainingStatus: 'completed', techCoordination: 4, numberOfCalls: 145, recordingPerformance: 4.2, overallScore: 85 },
-    { id: '2', name: 'Sarah Johnson', behaviorRating: 4.8, floorTrainingStatus: 'completed', techCoordination: 4.5, numberOfCalls: 167, recordingPerformance: 4.7, overallScore: 92 },
-    { id: '3', name: 'Mike Chen', behaviorRating: 3.9, floorTrainingStatus: 'in-progress', techCoordination: 3.5, numberOfCalls: 98, recordingPerformance: 3.8, overallScore: 75 },
-    { id: '4', name: 'Emma Davis', behaviorRating: 4.3, floorTrainingStatus: 'completed', techCoordination: 4.1, numberOfCalls: 132, recordingPerformance: 4.4, overallScore: 88 },
-    { id: '5', name: 'Alex Rodriguez', behaviorRating: 3.2, floorTrainingStatus: 'pending', techCoordination: 2.8, numberOfCalls: 54, recordingPerformance: 3.1, overallScore: 62 },
+    { id: 1, name: 'John Smith', behaviorRating: 4.5, floorTrainingStatus: 'completed', techCoordination: 4, numberOfCalls: 145, recordingPerformance: 4.2, overallScore: 85 },
+    { id: 2, name: 'Sarah Johnson', behaviorRating: 4.8, floorTrainingStatus: 'completed', techCoordination: 4.5, numberOfCalls: 167, recordingPerformance: 4.7, overallScore: 92 },
+    { id: 3, name: 'Mike Chen', behaviorRating: 3.9, floorTrainingStatus: 'in-progress', techCoordination: 3.5, numberOfCalls: 98, recordingPerformance: 3.8, overallScore: 75 },
+    { id: 4, name: 'Emma Davis', behaviorRating: 4.3, floorTrainingStatus: 'completed', techCoordination: 4.1, numberOfCalls: 132, recordingPerformance: 4.4, overallScore: 88 },
+    { id: 5, name: 'Alex Rodriguez', behaviorRating: 3.2, floorTrainingStatus: 'pending', techCoordination: 2.8, numberOfCalls: 54, recordingPerformance: 3.1, overallScore: 62 },
 ];
 
 // ─── Sales Recordings ─────────────────────────────────────────────────────────
 export type RecordingStatus = 'available' | 'processing' | 'failed';
 
 export interface Recording {
-    id: string;
+    id: number;
     agentName: string;
     clientName: string;
     date: string;
@@ -67,12 +67,12 @@ export interface Recording {
 }
 
 export const INITIAL_RECORDINGS: Recording[] = [
-    { id: '1', agentName: 'John Smith', clientName: 'ABC Corporation', date: '2026-02-10', duration: '15:32', status: 'available', qualityRating: 4, tags: ['follow-up', 'proposal'], outcome: 'converted' },
-    { id: '2', agentName: 'Sarah Johnson', clientName: 'XYZ Enterprises', date: '2026-02-11', duration: '22:18', status: 'available', qualityRating: 5, tags: ['demo', 'technical'], outcome: 'converted' },
-    { id: '3', agentName: 'Mike Chen', clientName: 'Tech Innovations LLC', date: '2026-02-11', duration: '08:45', status: 'processing', qualityRating: 0, tags: ['cold-call'], outcome: 'pending' },
-    { id: '4', agentName: 'Emma Davis', clientName: 'Global Services Inc', date: '2026-02-12', duration: '18:56', status: 'available', qualityRating: 4, tags: ['negotiation', 'pricing'], outcome: 'pending' },
-    { id: '5', agentName: 'Alex Rodriguez', clientName: 'StartUp Hub', date: '2026-02-12', duration: '12:24', status: 'failed', qualityRating: 0, tags: ['initial-contact'], outcome: 'lost' },
-    { id: '6', agentName: 'Sarah Johnson', clientName: 'Premium Partners', date: '2026-02-12', duration: '25:10', status: 'available', qualityRating: 5, tags: ['closing', 'contract'], outcome: 'converted' },
+    { id: 1, agentName: 'John Smith', clientName: 'ABC Corporation', date: '2026-02-10', duration: '15:32', status: 'available', qualityRating: 4, tags: ['follow-up', 'proposal'], outcome: 'converted' },
+    { id: 2, agentName: 'Sarah Johnson', clientName: 'XYZ Enterprises', date: '2026-02-11', duration: '22:18', status: 'available', qualityRating: 5, tags: ['demo', 'technical'], outcome: 'converted' },
+    { id: 3, agentName: 'Mike Chen', clientName: 'Tech Innovations LLC', date: '2026-02-11', duration: '08:45', status: 'processing', qualityRating: 0, tags: ['cold-call'], outcome: 'pending' },
+    { id: 4, agentName: 'Emma Davis', clientName: 'Global Services Inc', date: '2026-02-12', duration: '18:56', status: 'available', qualityRating: 4, tags: ['negotiation', 'pricing'], outcome: 'pending' },
+    { id: 5, agentName: 'Alex Rodriguez', clientName: 'StartUp Hub', date: '2026-02-12', duration: '12:24', status: 'failed', qualityRating: 0, tags: ['initial-contact'], outcome: 'lost' },
+    { id: 6, agentName: 'Sarah Johnson', clientName: 'Premium Partners', date: '2026-02-12', duration: '25:10', status: 'available', qualityRating: 5, tags: ['closing', 'contract'], outcome: 'converted' },
 ];
 
 // ─── Monthly Targets ──────────────────────────────────────────────────────────
@@ -119,10 +119,10 @@ export const UPCOMING_EVENTS = [
 ];
 
 export const MANAGER_PERFORMANCE = [
-    { id: '1', name: 'John Smith', role: 'Sales Manager', assigned: 25, completed: 20, percentage: 80 },
-    { id: '2', name: 'Emily Davis', role: 'CST Lead', assigned: 30, completed: 28, percentage: 93 },
-    { id: '3', name: 'Robert Wilson', role: 'Finance Manager', assigned: 12, completed: 11, percentage: 92 },
-    { id: '4', name: 'Sarah Martinez', role: 'QA Specialist', assigned: 20, completed: 18, percentage: 90 },
+    { id: 1, name: 'John Smith', role: 'Sales Manager', assigned: 25, completed: 20, percentage: 80 },
+    { id: 2, name: 'Emily Davis', role: 'CST Lead', assigned: 30, completed: 28, percentage: 93 },
+    { id: 3, name: 'Robert Wilson', role: 'Finance Manager', assigned: 12, completed: 11, percentage: 92 },
+    { id: 4, name: 'Sarah Martinez', role: 'QA Specialist', assigned: 20, completed: 18, percentage: 90 },
 ];
 
 export const COMPANY_METRICS = {
@@ -155,14 +155,21 @@ export const QA_TEAM_PERFORMANCE = [
 
 // ─── Task Delegation ──────────────────────────────────────────────────────────
 export const CST_MEMBERS = [
-    { id: '1', name: 'Emily Davis', role: 'CST Lead', currentTasks: 8 },
-    { id: '2', name: 'Mike Chen', role: 'CST Agent', currentTasks: 5 },
-    { id: '3', name: 'Lisa Johnson', role: 'CST Agent', currentTasks: 6 },
+    { id: 1, name: 'Emily Davis', role: 'CST Lead', currentTasks: 8 },
+    { id: 2, name: 'Mike Chen', role: 'CST Agent', currentTasks: 5 },
+    { id: 3, name: 'Lisa Johnson', role: 'CST Agent', currentTasks: 6 },
+];
+
+// CST Agents list for CST Manager assignment (keyed with cst-prefixed IDs to match ClientInboxContext seeds)
+export const CST_AGENTS = [
+    { id: 1, name: 'Emily Davis', role: 'CST Lead', currentClients: 9 },
+    { id: 2, name: 'Mike Chen', role: 'CST Agent', currentClients: 7 },
+    { id: 3, name: 'Lisa Johnson', role: 'CST Agent', currentClients: 8 },
 ];
 
 export const SALES_LEADS = [
-    { id: '1', companyName: 'ABC Corporation', customerName: 'John Williams', paymentAmount: 5000, productSold: 'SEO Services', serviceArea: 'North America', contactNo1: '+1 (555) 123-4567', submittedBy: 'John Smith', submittedDate: '2026-02-12', status: 'pending' as const },
-    { id: '2', companyName: 'XYZ Enterprises', customerName: 'Sarah Chen', paymentAmount: 8000, productSold: 'Web Development', serviceArea: 'Europe', contactNo1: '+44 20 1234 5678', submittedBy: 'Sarah Johnson', submittedDate: '2026-02-13', status: 'pending' as const },
+    { id: 1, companyName: 'ABC Corporation', customerName: 'John Williams', paymentAmount: 5000, productSold: 'SEO Services', serviceArea: 'North America', contactNo1: '+1 (555) 123-4567', submittedBy: 'John Smith', submittedDate: '2026-02-12', status: 'pending' as const },
+    { id: 2, companyName: 'XYZ Enterprises', customerName: 'Sarah Chen', paymentAmount: 8000, productSold: 'Web Development', serviceArea: 'Europe', contactNo1: '+44 20 1234 5678', submittedBy: 'Sarah Johnson', submittedDate: '2026-02-13', status: 'pending' as const },
 ];
 
 // ─── CST Dashboard ────────────────────────────────────────────────────────────
@@ -189,21 +196,21 @@ export const FLAGGED_CLIENTS: Array<{
     ];
 
 export const DAILY_TASKS = [
-    { id: '1', title: 'Follow up with ABC Corp on quarterly review', priority: 'high' as const, status: 'todo' as const, dueTime: '10:00 AM' },
-    { id: '2', title: 'Send onboarding checklist to StartUp Hub', priority: 'medium' as const, status: 'in-progress' as const, dueTime: '2:00 PM' },
-    { id: '3', title: 'Update client database with new contacts', priority: 'low' as const, status: 'done' as const, dueTime: '4:00 PM' },
-    { id: '4', title: 'Prepare monthly performance report', priority: 'high' as const, status: 'todo' as const, dueTime: '5:00 PM' },
+    { id: 1, title: 'Follow up with ABC Corp on quarterly review', priority: 'high' as const, status: 'todo' as const, dueTime: '10:00 AM' },
+    { id: 2, title: 'Send onboarding checklist to StartUp Hub', priority: 'medium' as const, status: 'in-progress' as const, dueTime: '2:00 PM' },
+    { id: 3, title: 'Update client database with new contacts', priority: 'low' as const, status: 'done' as const, dueTime: '4:00 PM' },
+    { id: 4, title: 'Prepare monthly performance report', priority: 'high' as const, status: 'todo' as const, dueTime: '5:00 PM' },
 ];
 
 export const SCHEDULED_CALLS = [
-    { id: '1', clientName: 'ABC Corporation', purpose: 'Quarterly Review', time: '10:00 AM', duration: '30 min', status: 'scheduled' as const },
-    { id: '2', clientName: 'XYZ Enterprises', purpose: 'Check-in Call', time: '2:30 PM', duration: '15 min', status: 'scheduled' as const },
-    { id: '3', clientName: 'Tech Innovations', purpose: 'Strategy Discussion', time: '4:00 PM', duration: '45 min', status: 'completed' as const },
+    { id: 1, clientName: 'ABC Corporation', purpose: 'Quarterly Review', time: '10:00 AM', duration: '30 min', status: 'scheduled' as const },
+    { id: 2, clientName: 'XYZ Enterprises', purpose: 'Check-in Call', time: '2:30 PM', duration: '15 min', status: 'scheduled' as const },
+    { id: 3, clientName: 'Tech Innovations', purpose: 'Strategy Discussion', time: '4:00 PM', duration: '45 min', status: 'completed' as const },
 ];
 
 export const SCHEDULED_EMAILS = [
-    { id: '1', clientName: 'Global Services Inc', subject: 'Onboarding Progress Update', scheduledTime: '9:00 AM', status: 'sent' as const, template: 'Onboarding Update' },
-    { id: '2', clientName: 'StartUp Hub', subject: 'Welcome to Our Service', scheduledTime: '11:00 AM', status: 'draft' as const, template: 'Welcome Email' },
+    { id: 1, clientName: 'Global Services Inc', subject: 'Onboarding Progress Update', scheduledTime: '9:00 AM', status: 'sent' as const, template: 'Onboarding Update' },
+    { id: 2, clientName: 'StartUp Hub', subject: 'Welcome to Our Service', scheduledTime: '11:00 AM', status: 'draft' as const, template: 'Welcome Email' },
 ];
 
 // ─── QA Dashboard ─────────────────────────────────────────────────────────────

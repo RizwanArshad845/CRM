@@ -138,7 +138,8 @@ export function Login() {
               <span>john@company.com</span><span className="text-gray-400">Sales Agent</span>
               <span>ahmed@company.com</span><span className="text-gray-400">Sales Manager</span>
               <span>robert@company.com</span><span className="text-gray-400">Finance</span>
-              <span>emily@company.com</span><span className="text-gray-400">CST</span>
+              <span>emily@company.com</span><span className="text-gray-400">CST Agent</span>
+              <span>olivia@company.com</span><span className="text-gray-400">CST Manager</span>
             </div>
             <p className="mt-2.5 text-xs text-gray-400 italic">Password: any</p>
           </div>

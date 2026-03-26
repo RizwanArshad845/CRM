@@ -23,7 +23,7 @@ export function SalesRecordings() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAgent, setFilterAgent] = useState('all');
   const [filterOutcome, setFilterOutcome] = useState('all');
-  const [playingId, setPlayingId] = useState<string | null>(null);
+  const [playingId, setPlayingId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const agentNames = [...new Set(recordings.map(r => r.agentName))];
@@ -40,7 +40,7 @@ export function SalesRecordings() {
     if (!file) return;
     const objectUrl = URL.createObjectURL(file);
     const newRec: LocalRecording = {
-      id: Date.now().toString(),
+      id: Date.now(),
       agentName: 'Me',
       clientName: file.name.replace(/\.[^.]+$/, ''),
       date: new Date().toISOString().split('T')[0],
