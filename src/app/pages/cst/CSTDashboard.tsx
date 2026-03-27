@@ -116,6 +116,7 @@ function ActiveClientsPanel() {
   const isCSTAgent   = user?.role === 'cst';
 
   const [flagTarget, setFlagTarget] = useState<{ id: string; name: string } | null>(null);
+  const [search, setSearch] = useState('');
 
   const handleRequestDeactivation = (clientId: string, clientName: string) => {
     if (!user) return;
@@ -128,20 +129,28 @@ function ActiveClientsPanel() {
       {/* Active Clients */}
       <Card>
         <CardHeader>
-          <CardTitle className={cls.inline}>
-            <div className="h-3 w-3 rounded-full bg-green-500" />
-            Active Clients
-          </CardTitle>
-          <CardDescription>
-            {isCSTManager
-              ? 'Activate or deactivate clients'
-              : isCSTAgent
-              ? 'Flag clients or request deactivation'
-              : `${clients.filter(c => c.isActive).length} currently active clients`}
-          </CardDescription>
+          <div className={cls.row}>
+            <div>
+              <CardTitle className={cls.inline}>
+                <div className="h-3 w-3 rounded-full bg-green-500" />
+                Active Clients
+              </CardTitle>
+              <CardDescription>
+                {isCSTManager
+                  ? 'Activate or deactivate clients'
+                  : isCSTAgent
+                  ? 'Flag clients or request deactivation'
+                  : `${clients.filter(c => c.isActive).length} currently active clients`}
+              </CardDescription>
+            </div>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search active clients..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9 text-sm w-[250px]" />
+            </div>
+          </div>
         </CardHeader>
         <CardContent className={cls.list}>
-          {clients.map(c => (
+          {clients.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase())).map(c => (
             <div
               key={c.id}
               className={`${cls.itemHover} ${!c.isActive ? 'opacity-60' : ''}`}
