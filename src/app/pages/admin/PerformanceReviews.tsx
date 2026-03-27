@@ -231,14 +231,26 @@ export function PerformanceReviews() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterPriority, setFilterPriority] = useState('all');
+  const [agentSearch, setAgentSearch] = useState('');
 
   const filterProps = { search, setSearch, filterStatus, setFilterStatus, filterPriority, setFilterPriority };
+
+  const filterTeam = <T extends { name: string }>(team: T[]) =>
+    team.filter(m => !agentSearch || m.name.toLowerCase().includes(agentSearch.toLowerCase()));
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Performance Reviews by Team</CardTitle>
-        <CardDescription>Comprehensive performance metrics, task details, and full attendance records</CardDescription>
+        <div className={cls.row}>
+          <div>
+            <CardTitle>Performance Reviews by Team</CardTitle>
+            <CardDescription>Comprehensive performance metrics, task details, and full attendance records</CardDescription>
+          </div>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Search employee..." value={agentSearch} onChange={e => setAgentSearch(e.target.value)} className="pl-9 h-9 text-sm w-[250px]" />
+          </div>
+        </div>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="sales" className="w-full">
@@ -255,7 +267,7 @@ export function PerformanceReviews() {
           {/* Sales Agents */}
           <TabsContent value="sales" className={`${cls.section} mt-6`}>
             <FilterBar {...filterProps} />
-            {SALES_TEAM_PERFORMANCE.map(m => (
+            {filterTeam(SALES_TEAM_PERFORMANCE).map(m => (
               <Card key={m.id} className="border-2">
                 <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overallScore} /></CardHeader>
                 <CardContent className={cls.section}>
@@ -282,7 +294,7 @@ export function PerformanceReviews() {
           {/* Sales Manager */}
           <TabsContent value="sales_manager" className={`${cls.section} mt-6`}>
             <FilterBar {...filterProps} />
-            {SALES_MANAGER_PERFORMANCE.map(m => (
+            {filterTeam(SALES_MANAGER_PERFORMANCE).map(m => (
               <Card key={m.id} className="border-2 border-blue-200">
                 <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overallScore} /></CardHeader>
                 <CardContent className={cls.section}>
@@ -308,7 +320,7 @@ export function PerformanceReviews() {
           {/* CST */}
           <TabsContent value="cst" className={`${cls.section} mt-6`}>
             <FilterBar {...filterProps} />
-            {CST_TEAM_PERFORMANCE.map(m => (
+            {filterTeam(CST_TEAM_PERFORMANCE).map(m => (
               <Card key={m.id} className="border-2">
                 <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overallScore} /></CardHeader>
                 <CardContent className={cls.section}>
@@ -328,7 +340,7 @@ export function PerformanceReviews() {
           {/* Finance */}
           <TabsContent value="finance" className={`${cls.section} mt-6`}>
             <FilterBar {...filterProps} />
-            {FINANCE_TEAM_PERFORMANCE.map(m => (
+            {filterTeam(FINANCE_TEAM_PERFORMANCE).map(m => (
               <Card key={m.id} className="border-2">
                 <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overallScore} /></CardHeader>
                 <CardContent className={cls.section}>
@@ -348,7 +360,7 @@ export function PerformanceReviews() {
           {/* QA */}
           <TabsContent value="qa" className={`${cls.section} mt-6`}>
             <FilterBar {...filterProps} />
-            {QA_TEAM_PERFORMANCE.map(m => (
+            {filterTeam(QA_TEAM_PERFORMANCE).map(m => (
               <Card key={m.id} className="border-2">
                 <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overallScore} /></CardHeader>
                 <CardContent className={cls.section}>

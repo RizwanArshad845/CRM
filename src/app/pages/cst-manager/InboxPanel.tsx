@@ -5,7 +5,8 @@ import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
 import { Label } from '../../components/ui/label';
-import { UserCheck, CheckCircle2 } from 'lucide-react';
+import { Input } from '../../components/ui/input';
+import { UserCheck, CheckCircle2, Search } from 'lucide-react';
 import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { useClientInbox, type InboxClient } from '../../context/ClientInboxContext';
@@ -19,7 +20,9 @@ function statusBadge(status: InboxClient['status']) {
 
 export function InboxPanel() {
     const { inboxClients, assignClient } = useClientInbox();
-    const pending = inboxClients.filter(c => c.status === 'pending');
+    const [search, setSearch] = useState('');
+    const pending = inboxClients.filter(c => c.status === 'pending')
+        .filter(c => !search || c.companyName.toLowerCase().includes(search.toLowerCase()) || c.customerName.toLowerCase().includes(search.toLowerCase()));
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selected, setSelected] = useState<InboxClient | null>(null);
@@ -42,11 +45,15 @@ export function InboxPanel() {
 
     return (
         <div className={cls.page}>
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
                 <h2 className="text-lg font-semibold">Pending Client Submissions</h2>
                 <Badge className="bg-yellow-100 text-yellow-700 border border-yellow-200">
                     {pending.length} pending
                 </Badge>
+                <div className="relative ml-auto">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search pending..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9 text-sm w-[250px]" />
+                </div>
             </div>
 
             {pending.length === 0 ? (

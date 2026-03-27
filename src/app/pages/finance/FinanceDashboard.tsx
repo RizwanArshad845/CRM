@@ -6,7 +6,7 @@ import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../../components/ui/dialog';
-import { DollarSign, Download, Calculator, TrendingUp, TrendingDown, Edit } from 'lucide-react';
+import { DollarSign, Download, Calculator, TrendingUp, TrendingDown, Edit, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Employee } from '../../types/crm';
 import { DashboardHeader } from '../../components/shared/DashboardHeader';
@@ -56,9 +56,11 @@ export function FinanceDashboard() {
   const [editingEmp, setEditingEmp] = useState<Employee | null>(null);
   const [editForm, setEditForm] = useState<EditForm>(EMPTY_EDIT);
   const [calc, setCalc] = useState({ base: '', bonus: '', deductions: '', advances: '' });
+  const [employeeSearch, setEmployeeSearch] = useState('');
 
   const active = employees.filter(e => e.isActive);
-  const displayed = filterDept === 'all' ? employees : employees.filter(e => e.department.toLowerCase() === filterDept);
+  const displayed = (filterDept === 'all' ? employees : employees.filter(e => e.department.toLowerCase() === filterDept))
+    .filter(e => !employeeSearch || e.name.toLowerCase().includes(employeeSearch.toLowerCase()) || e.employeeId.toLowerCase().includes(employeeSearch.toLowerCase()));
   const totalSalaries = active.reduce((s, e) => s + e.totalSalary, 0);
   const totalAdvances = active.reduce((s, e) => s + e.advancePayments, 0);
   const calcTotal = Number(calc.base || 0) + Number(calc.bonus || 0) - Number(calc.deductions || 0) - Number(calc.advances || 0);
@@ -134,6 +136,10 @@ export function FinanceDashboard() {
                 <CardDescription>Payroll syncs automatically with Admin employee additions</CardDescription>
               </div>
               <div className={cls.actions}>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input placeholder="Search employee..." value={employeeSearch} onChange={e => setEmployeeSearch(e.target.value)} className="pl-9 h-9 text-sm w-[200px]" />
+                </div>
                 <Select value={filterDept} onValueChange={setFilterDept}>
                   <SelectTrigger className="w-[180px]"><SelectValue placeholder="All Departments" /></SelectTrigger>
                   <SelectContent>

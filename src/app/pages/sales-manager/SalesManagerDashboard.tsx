@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
-import { TrendingUp, Users, PhoneCall, Target, Mic, ClipboardCheck } from 'lucide-react';
+import { TrendingUp, Users, PhoneCall, Target, Mic, ClipboardCheck, Search } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -29,8 +29,11 @@ function TargetsOverview() {
     const { targets, assignTarget } = useAgentTargets();
     const [assignAgent, setAssignAgent] = useState('');
     const [assignAmount, setAssignAmount] = useState('');
+    const [targetSearch, setTargetSearch] = useState('');
 
     const ALL_AGENT_NAMES = [...new Set(AGENT_TARGETS.map(t => t.agentName))];
+
+    const filteredTargets = targets.filter(t => !targetSearch || t.agentName.toLowerCase().includes(targetSearch.toLowerCase()));
 
     const handleAssign = () => {
         if (!assignAgent || !assignAmount) { toast.error('Select an agent and enter a target amount'); return; }
@@ -68,8 +71,16 @@ function TargetsOverview() {
             {/* All agents target history */}
             <Card>
                 <CardHeader>
-                    <CardTitle>All Agents — Target History</CardTitle>
-                    <CardDescription>Monthly targets and achievement across the full team</CardDescription>
+                    <div className={cls.row}>
+                        <div>
+                            <CardTitle>All Agents — Target History</CardTitle>
+                            <CardDescription>Monthly targets and achievement across the full team</CardDescription>
+                        </div>
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input placeholder="Search agent..." value={targetSearch} onChange={e => setTargetSearch(e.target.value)} className="pl-9 h-9 text-sm w-[250px]" />
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <div className="overflow-x-auto rounded-lg border">
@@ -82,7 +93,7 @@ function TargetsOverview() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y">
-                                {targets.map(t => {
+                                {filteredTargets.map(t => {
                                     const pct = t.target > 0 ? Math.round((t.achieved / t.target) * 100) : 0;
                                     return (
                                         <tr key={t.id} className={cls.tableRow}>

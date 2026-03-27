@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import { Input } from '../../components/ui/input';
+import { Search } from 'lucide-react';
 import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { useClientInbox, type InboxClient } from '../../context/ClientInboxContext';
@@ -12,13 +15,19 @@ function statusBadge(status: InboxClient['status']) {
 
 export function AssignedPanel() {
     const { inboxClients, unassignClient } = useClientInbox();
-    const assigned = inboxClients.filter(c => c.status === 'assigned' || c.status === 'reviewed');
+    const [search, setSearch] = useState('');
+    const assigned = inboxClients.filter(c => c.status === 'assigned' || c.status === 'reviewed')
+        .filter(c => !search || c.companyName.toLowerCase().includes(search.toLowerCase()) || c.customerName.toLowerCase().includes(search.toLowerCase()));
 
     return (
         <div className={cls.page}>
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
                 <h2 className="text-lg font-semibold">Assigned Clients</h2>
                 <Badge variant="outline">{assigned.length} total</Badge>
+                <div className="relative ml-auto">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search assigned..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9 h-9 text-sm w-[250px]" />
+                </div>
             </div>
 
             {assigned.length === 0 ? (

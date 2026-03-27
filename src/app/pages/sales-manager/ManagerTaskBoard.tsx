@@ -7,7 +7,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { PlusCircle, ClipboardList, BarChart3, CheckCircle2, Clock, XCircle, AlertCircle } from 'lucide-react';
+import { PlusCircle, ClipboardList, BarChart3, CheckCircle2, Clock, XCircle, AlertCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { cls } from '../../styles/classes';
 import { useManagerTasks, type TaskPriority, type TaskStatus } from '../../context/ManagerTaskContext';
@@ -47,6 +47,7 @@ export function ManagerTaskBoard() {
     const [form, setForm] = useState(EMPTY_FORM);
     const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
     const [filterOrigin, setFilterOrigin] = useState<'all' | 'self' | 'admin'>('all');
+    const [taskSearch, setTaskSearch] = useState('');
 
     const set = <K extends keyof typeof EMPTY_FORM>(k: K, v: (typeof EMPTY_FORM)[K]) =>
         setForm(prev => ({ ...prev, [k]: v }));
@@ -77,6 +78,7 @@ export function ManagerTaskBoard() {
     const filtered = tasks.filter(t => {
         if (filterStatus !== 'all' && t.status !== filterStatus) return false;
         if (filterOrigin !== 'all' && t.assignedBy !== filterOrigin) return false;
+        if (taskSearch && !t.title.toLowerCase().includes(taskSearch.toLowerCase())) return false;
         return true;
     });
 
@@ -202,6 +204,10 @@ export function ManagerTaskBoard() {
                         </div>
                         {/* Filters */}
                         <div className="flex gap-2 flex-wrap">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input placeholder="Search tasks..." value={taskSearch} onChange={e => setTaskSearch(e.target.value)} className="pl-9 h-8 text-xs w-[200px]" />
+                            </div>
                             <Select value={filterStatus} onValueChange={v => setFilterStatus(v as TaskStatus | 'all')}>
                                 <SelectTrigger className="w-36 h-8 text-xs"><SelectValue placeholder="Status" /></SelectTrigger>
                                 <SelectContent>

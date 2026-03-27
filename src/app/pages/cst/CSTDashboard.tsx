@@ -7,7 +7,7 @@ import { Progress } from '../../components/ui/progress';
 import { Checkbox } from '../../components/ui/checkbox';
 import {
   Users, Calendar, Flag, Phone, Mail, UserPlus,
-  PowerOff, Power, AlertTriangle, CheckCircle2,
+  PowerOff, Power, AlertTriangle, CheckCircle2, Search
 } from 'lucide-react';
 import { DashboardHeader } from '../../components/shared/DashboardHeader';
 import { cls } from '../../styles/classes';
@@ -286,6 +286,9 @@ function ActiveClientsPanel() {
 
 // ── Main dashboard ────────────────────────────────────────────────────────────
 export function CSTDashboard() {
+  const [onboardSearch, setOnboardSearch] = useState('');
+  const [flaggedSearch, setFlaggedSearch] = useState('');
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader title="Customer Success Team Portal" bgColor="bg-[#2C3E50]" />
@@ -304,11 +307,19 @@ export function CSTDashboard() {
             {/* Onboarding */}
             <Card>
               <CardHeader>
-                <CardTitle className={cls.inline}><UserPlus className="h-5 w-5 text-blue-500" />Clients to be Onboarded</CardTitle>
-                <CardDescription>{ONBOARDING_CLIENTS.length} clients in onboarding</CardDescription>
+                <div className={cls.row}>
+                  <div>
+                    <CardTitle className={cls.inline}><UserPlus className="h-5 w-5 text-blue-500" />Clients to be Onboarded</CardTitle>
+                    <CardDescription>{ONBOARDING_CLIENTS.length} clients in onboarding</CardDescription>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search client..." value={onboardSearch} onChange={e => setOnboardSearch(e.target.value)} className="pl-9 h-9 text-sm w-[250px]" />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className={cls.section}>
-                {ONBOARDING_CLIENTS.map(c => (
+                {ONBOARDING_CLIENTS.filter(c => !onboardSearch || c.name.toLowerCase().includes(onboardSearch.toLowerCase()) || c.assignedAgent.toLowerCase().includes(onboardSearch.toLowerCase())).map(c => (
                   <div key={c.id} className={cls.item}>
                     <div className={`${cls.row} mb-3`}>
                       <div>
@@ -330,11 +341,19 @@ export function CSTDashboard() {
             {/* Flagged Clients */}
             <Card>
               <CardHeader>
-                <CardTitle className={cls.inline}><Flag className="h-5 w-5 text-red-500" />Flagged Clients</CardTitle>
-                <CardDescription>Clients requiring immediate attention</CardDescription>
+                <div className={cls.row}>
+                  <div>
+                    <CardTitle className={cls.inline}><Flag className="h-5 w-5 text-red-500" />Flagged Clients</CardTitle>
+                    <CardDescription>Clients requiring immediate attention</CardDescription>
+                  </div>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Search client or issue..." value={flaggedSearch} onChange={e => setFlaggedSearch(e.target.value)} className="pl-9 h-9 text-sm w-[250px]" />
+                  </div>
+                </div>
               </CardHeader>
               <CardContent className={cls.list}>
-                {FLAGGED_CLIENTS.map(c => (
+                {FLAGGED_CLIENTS.filter(c => !flaggedSearch || c.name.toLowerCase().includes(flaggedSearch.toLowerCase()) || c.issue.toLowerCase().includes(flaggedSearch.toLowerCase())).map(c => (
                   <div key={c.id} className={cls.item} style={{ borderLeft: `6px solid ${FLAG_BORDER_COLORS[c.type]}` }}>
                     <div className={`${cls.row} mb-2`}>
                       <div>

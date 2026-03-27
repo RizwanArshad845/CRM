@@ -6,7 +6,7 @@ import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../../components/ui/dialog';
-import { UserPlus, Edit, Trash2, Mail } from 'lucide-react';
+import { UserPlus, Edit, Trash2, Mail, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Employee } from '../../types/crm';
 import { cls } from '../../styles/classes';
@@ -29,6 +29,7 @@ export function EmployeeManagement() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Employee | null>(null);
   const [form, setForm] = useState<EmpForm>(EMPTY_EMP);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const setField = (k: keyof EmpForm, v: string) => setForm(prev => ({ ...prev, [k]: v }));
 
@@ -105,10 +106,15 @@ export function EmployeeManagement() {
             <CardTitle>Employee Management</CardTitle>
             <CardDescription>Full CRUD for all employees — changes sync to Finance payroll</CardDescription>
           </div>
-          <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-            <DialogTrigger asChild>
-              <Button><UserPlus className="h-4 w-4 mr-2" />Add Employee</Button>
-            </DialogTrigger>
+          <div className="flex gap-2">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input placeholder="Search employees..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 h-10 text-sm w-[250px]" />
+            </div>
+            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+              <DialogTrigger asChild>
+                <Button className="h-10"><UserPlus className="h-4 w-4 mr-2" />Add Employee</Button>
+              </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Add New Employee</DialogTitle>
@@ -121,6 +127,7 @@ export function EmployeeManagement() {
               </DialogFooter>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -134,7 +141,7 @@ export function EmployeeManagement() {
               </tr>
             </thead>
             <tbody>
-              {employees.map(emp => (
+              {employees.filter(emp => !searchTerm || emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || emp.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) || emp.email.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
                 <tr key={emp.id} className={cls.tableRow}>
                   <td className={`${cls.tableCell} ${cls.heading}`}>{emp.name}</td>
                   <td className={`${cls.tableCell} ${cls.mono}`}>{emp.employeeId}</td>
