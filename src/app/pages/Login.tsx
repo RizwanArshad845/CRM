@@ -12,17 +12,27 @@ export function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = login(email, password);
-    if (success) {
-      toast.success('Login successful!');
-      navigate('/clock-in');
-    } else {
-      toast.error('Invalid email or password');
+    if (isLoggingIn) return;
+
+    setIsLoggingIn(true);
+    try {
+      const success = await login(email, password);
+      if (success) {
+        toast.success('Login successful!');
+        navigate('/clock-in');
+      } else {
+        toast.error('Invalid email or password');
+      }
+    } catch (error) {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -126,8 +136,13 @@ export function Login() {
               </Button>
             </div>
 
-            <Button type="submit" className="w-full h-11 text-base font-semibold gap-2">
-              Sign In <ArrowRight className="h-4 w-4" />
+            <Button 
+              type="submit" 
+              className="w-full h-11 text-base font-semibold gap-2"
+              disabled={isLoggingIn}
+            >
+              {isLoggingIn ? 'Signing in...' : 'Sign In'}
+              {!isLoggingIn && <ArrowRight className="h-4 w-4" />}
             </Button>
           </form>
 

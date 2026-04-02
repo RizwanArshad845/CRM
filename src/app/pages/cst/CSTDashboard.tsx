@@ -4,22 +4,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/ta
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
-import { Checkbox } from '../../components/ui/checkbox';
 import {
-  Users, Calendar, Flag, Phone, Mail, UserPlus,
-  PowerOff, Power, AlertTriangle, CheckCircle2, Search
+  Users, Calendar, Flag, UserPlus, Clock,
+  PowerOff, Power, AlertTriangle, CheckCircle2, Search,
+  Plus, Edit, Trash2
 } from 'lucide-react';
 import { DashboardHeader } from '../../components/shared/DashboardHeader';
 import { cls } from '../../styles/classes';
-import {
-  ONBOARDING_CLIENTS, FLAGGED_CLIENTS,
-  DAILY_TASKS, SCHEDULED_CALLS, SCHEDULED_EMAILS, type FlagType,
-} from '../../data/mockData';
 import { useClients } from '../../context/ClientContext';
 import { useAuth } from '../../context/AuthContext';
+import { useCSTSchedule, Schedule as CSTSchedule } from '../../context/CSTScheduleContext';
 import { toast } from 'sonner';
 
-// ── Flag dialog (client selecton) ─────────────────────────────────────────────
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
   DialogDescription, DialogFooter,
@@ -28,51 +24,39 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Label } from '../../components/ui/label';
 import { Input } from '../../components/ui/input';
 
-const PRIORITY_COLORS = {
-  high: 'bg-red-100 text-red-800',
-  medium: 'bg-yellow-100 text-yellow-800',
-  low: 'bg-blue-100 text-blue-800',
-};
+// ── Schedule type matching DB: schedules(id, user_id, title, description, start_time, end_time)
+type ScheduleForm = { title: string; description: string; start_time: string; end_time: string };
+const EMPTY_SCHEDULE_FORM: ScheduleForm = { title: '', description: '', start_time: '', end_time: '' };
 
-const TASK_STATUS_COLORS = {
-  todo: 'bg-gray-100 text-gray-800',
-  'in-progress': 'bg-purple-100 text-purple-800',
-  done: 'bg-green-100 text-green-800',
-};
-
-const FLAG_BORDER_COLORS: Record<FlagType, string> = {
+const FLAG_BORDER_COLORS: Record<string, string> = {
   'red-flag': '#ef4444',
   'yellow-flag': '#eab308',
   'black-flag': '#111827',
+  'flagged': '#ef4444'
 };
 
-const FLAG_OPTIONS: { value: FlagType; label: string }[] = [
+const FLAG_OPTIONS: { value: string; label: string }[] = [
   { value: 'red-flag', label: '🔴 Red Flag — Urgent issue' },
   { value: 'yellow-flag', label: '🟡 Yellow Flag — Watch closely' },
   { value: 'black-flag', label: '⚫ Black Flag — Churn / Cancel' },
 ];
 
-function healthColor(score: number) {
-  if (score >= 80) return 'text-green-600';
-  if (score >= 60) return 'text-yellow-600';
-  return 'text-red-600';
-}
-
 // ── Flag dialog (CST Agent only) ──────────────────────────────────────────────
 interface FlagDialogProps {
   clientName: string;
-  clientId: string;
+  clientId: number;
   open: boolean;
   onClose: () => void;
 }
 
-function FlagDialog({ clientName, open, onClose }: FlagDialogProps) {
-  const [flagType, setFlagType] = useState<FlagType>('yellow-flag');
+function FlagDialog({ clientName, clientId, open, onClose }: FlagDialogProps) {
+  const [flagType, setFlagType] = useState<string>('yellow-flag');
   const [issue, setIssue] = useState('');
+  const { flagClient } = useClients();
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!issue.trim()) { toast.error('Please describe the issue'); return; }
-    toast.success(`${clientName} flagged as "${flagType.replace('-', ' ')}" — CST Manager notified.`);
+    await flagClient(clientId, flagType, issue);
     setIssue('');
     onClose();
   };
@@ -87,7 +71,7 @@ function FlagDialog({ clientName, open, onClose }: FlagDialogProps) {
         <div className={cls.section}>
           <div className={cls.field}>
             <Label>Flag Type</Label>
-            <Select value={flagType} onValueChange={v => setFlagType(v as FlagType)}>
+            <Select value={flagType} onValueChange={v => setFlagType(v)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 {FLAG_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
@@ -115,14 +99,16 @@ function ActiveClientsPanel() {
   const isCSTManager = user?.role === 'cst_manager';
   const isCSTAgent   = user?.role === 'cst';
 
-  const [flagTarget, setFlagTarget] = useState<{ id: string; name: string } | null>(null);
+  const [flagTarget, setFlagTarget] = useState<{ id: number; name: string } | null>(null);
   const [search, setSearch] = useState('');
 
-  const handleRequestDeactivation = (clientId: string, clientName: string) => {
+  const handleRequestDeactivation = (clientId: number, clientName: string) => {
     if (!user) return;
-    requestDeactivation(clientId, clientName, user.name);
+    requestDeactivation(clientId, clientName, user.first_name);
     toast.info(`Deactivation request for "${clientName}" sent to CST Manager.`);
   };
+
+  const activeClients = clients.filter(c => c.isActive && c.status === 'active');
 
   return (
     <div className={cls.section}>
@@ -140,7 +126,7 @@ function ActiveClientsPanel() {
                   ? 'Activate or deactivate clients'
                   : isCSTAgent
                   ? 'Flag clients or request deactivation'
-                  : `${clients.filter(c => c.isActive).length} currently active clients`}
+                  : `${activeClients.length} currently active clients`}
               </CardDescription>
             </div>
             <div className="relative">
@@ -150,7 +136,7 @@ function ActiveClientsPanel() {
           </div>
         </CardHeader>
         <CardContent className={cls.list}>
-          {clients.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase())).map(c => (
+          {activeClients.filter(c => !search || c.name.toLowerCase().includes(search.toLowerCase())).map(c => (
             <div
               key={c.id}
               className={`${cls.itemHover} ${!c.isActive ? 'opacity-60' : ''}`}
@@ -171,9 +157,9 @@ function ActiveClientsPanel() {
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm mb-3">
                 {[
-                  { label: 'Last Interaction', value: new Date(c.lastInteraction).toLocaleDateString() },
-                  { label: 'Next Check-in', value: new Date(c.nextCheckIn).toLocaleDateString() },
-                  { label: 'Assigned Agent', value: c.assignedAgent },
+                  { label: 'Last Interaction', value: c.lastInteraction || 'N/A' },
+                  { label: 'Next Check-in', value: c.nextCheckIn || 'N/A' },
+                  { label: 'Assigned Agent', value: c.assignedAgent || 'Unassigned' },
                 ].map(({ label, value }) => (
                   <div key={label}>
                     <p className={cls.hint}>{label}</p>
@@ -190,7 +176,6 @@ function ActiveClientsPanel() {
                     variant={c.isActive ? 'destructive' : 'default'}
                     onClick={() => {
                       toggleActive(c.id);
-                      toast.success(`${c.name} ${c.isActive ? 'deactivated' : 'activated'}.`);
                     }}
                   >
                     {c.isActive
@@ -257,8 +242,7 @@ function ActiveClientsPanel() {
                     size="sm"
                     variant="destructive"
                     onClick={() => {
-                      resolveDeactivationRequest(req.clientId, true);
-                      toast.success(`${req.clientName} has been deactivated.`);
+                      resolveDeactivationRequest(req.id, true, req.clientId);
                     }}
                   >
                     <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Approve &amp; Deactivate
@@ -267,8 +251,7 @@ function ActiveClientsPanel() {
                     size="sm"
                     variant="outline"
                     onClick={() => {
-                      resolveDeactivationRequest(req.clientId, false);
-                      toast.info(`Request for ${req.clientName} dismissed.`);
+                      resolveDeactivationRequest(req.id, false, req.clientId);
                     }}
                   >
                     Dismiss
@@ -297,6 +280,75 @@ function ActiveClientsPanel() {
 export function CSTDashboard() {
   const [onboardSearch, setOnboardSearch] = useState('');
   const [flaggedSearch, setFlaggedSearch] = useState('');
+  const { user } = useAuth();
+  const { clients, unflagClient } = useClients();
+  const { schedules, addSchedule, updateSchedule, deleteSchedule } = useCSTSchedule();
+  const [isScheduleOpen, setIsScheduleOpen] = useState(false);
+  const [editingScheduleId, setEditingScheduleId] = useState<number | null>(null);
+  const [scheduleForm, setScheduleForm] = useState<ScheduleForm>(EMPTY_SCHEDULE_FORM);
+
+  // Filters
+  const onboardingClients = clients.filter(c => c.status === 'onboarding');
+  const flaggedClients = clients.filter(c => c.status === 'flagged');
+
+  // Schedule helpers
+  const formatTime = (iso: string) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatDate = (iso: string) => new Date(iso).toLocaleDateString();
+  const getDuration = (start: string, end: string) => {
+    const diff = (new Date(end).getTime() - new Date(start).getTime()) / 60000;
+    return diff >= 60 ? `${Math.floor(diff / 60)}h ${diff % 60}m` : `${diff}m`;
+  };
+  const isUpcoming = (start: string) => new Date(start) > new Date();
+
+  const openScheduleModal = (sch?: CSTSchedule) => {
+    if (sch) {
+      setEditingScheduleId(sch.id);
+      setScheduleForm({
+        title: sch.title,
+        description: sch.description,
+        start_time: sch.start_time.slice(0, 16), // for datetime-local input
+        end_time: sch.end_time.slice(0, 16),
+      });
+    } else {
+      setEditingScheduleId(null);
+      setScheduleForm(EMPTY_SCHEDULE_FORM);
+    }
+    setIsScheduleOpen(true);
+  };
+
+  const handleScheduleSubmit = async () => {
+    if (!scheduleForm.title || !scheduleForm.start_time || !scheduleForm.end_time) {
+      toast.error('Title, start time and end time are required');
+      return;
+    }
+    if (new Date(scheduleForm.end_time) <= new Date(scheduleForm.start_time)) {
+      toast.error('End time must be after start time');
+      return;
+    }
+
+    if (editingScheduleId !== null) {
+      await updateSchedule(editingScheduleId, {
+          title: scheduleForm.title,
+          description: scheduleForm.description,
+          start_time: scheduleForm.start_time,
+          end_time: scheduleForm.end_time
+      });
+    } else {
+      await addSchedule({
+          user_id: user?.id as number,
+          title: scheduleForm.title,
+          description: scheduleForm.description,
+          start_time: scheduleForm.start_time,
+          end_time: scheduleForm.end_time
+      });
+    }
+    setIsScheduleOpen(false);
+  };
+
+  const handleDeleteScheduleRow = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this schedule?')) return;
+    await deleteSchedule(id);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -319,7 +371,7 @@ export function CSTDashboard() {
                 <div className={cls.row}>
                   <div>
                     <CardTitle className={cls.inline}><UserPlus className="h-5 w-5 text-blue-500" />Clients to be Onboarded</CardTitle>
-                    <CardDescription>{ONBOARDING_CLIENTS.length} clients in onboarding</CardDescription>
+                    <CardDescription>{onboardingClients.length} clients in onboarding</CardDescription>
                   </div>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -328,22 +380,26 @@ export function CSTDashboard() {
                 </div>
               </CardHeader>
               <CardContent className={cls.section}>
-                {ONBOARDING_CLIENTS.filter(c => !onboardSearch || c.name.toLowerCase().includes(onboardSearch.toLowerCase()) || c.assignedAgent.toLowerCase().includes(onboardSearch.toLowerCase())).map(c => (
-                  <div key={c.id} className={cls.item}>
-                    <div className={`${cls.row} mb-3`}>
-                      <div>
-                        <h4 className={cls.heading}>{c.name}</h4>
-                        <p className={cls.hint}>Stage: {c.stage}</p>
-                      </div>
-                      <Badge variant="outline">{c.progress}%</Badge>
-                    </div>
-                    <Progress value={c.progress} className="mb-3" />
-                    <div className={cls.grid2}>
-                      <div><p className={cls.hint}>Assigned Agent</p><p className={cls.heading}>{c.assignedAgent}</p></div>
-                      <div><p className={cls.hint}>Expected Completion</p><p className={cls.heading}>{new Date(c.expectedCompletion).toLocaleDateString()}</p></div>
-                    </div>
-                  </div>
-                ))}
+                {onboardingClients.length === 0 ? (
+                    <p className={`${cls.hint} text-center py-4`}>No clients currently in onboarding.</p>
+                ) : (
+                    onboardingClients.filter(c => !onboardSearch || c.name.toLowerCase().includes(onboardSearch.toLowerCase())).map(c => (
+                        <div key={c.id} className={cls.item}>
+                          <div className={`${cls.row} mb-3`}>
+                            <div>
+                              <h4 className={cls.heading}>{c.name}</h4>
+                              <p className={cls.hint}>Stage: {c.status}</p>
+                            </div>
+                            <Badge variant="outline">{c.onboardingProgress || 0}%</Badge>
+                          </div>
+                          <Progress value={c.onboardingProgress || 0} className="mb-3" />
+                          <div className={cls.grid2}>
+                            <div><p className={cls.hint}>Assigned Agent</p><p className={cls.heading}>{c.assignedAgent || 'Unassigned'}</p></div>
+                            <div><p className={cls.hint}>Last Interaction</p><p className={cls.heading}>{c.lastInteraction || 'N/A'}</p></div>
+                          </div>
+                        </div>
+                    ))
+                )}
               </CardContent>
             </Card>
 
@@ -357,116 +413,146 @@ export function CSTDashboard() {
                   </div>
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input placeholder="Search client or issue..." value={flaggedSearch} onChange={e => setFlaggedSearch(e.target.value)} className="pl-9 h-9 text-sm w-[250px]" />
+                    <Input placeholder="Search client..." value={flaggedSearch} onChange={e => setFlaggedSearch(e.target.value)} className="pl-9 h-9 text-sm w-[250px]" />
                   </div>
                 </div>
               </CardHeader>
               <CardContent className={cls.list}>
-                {FLAGGED_CLIENTS.filter(c => !flaggedSearch || c.name.toLowerCase().includes(flaggedSearch.toLowerCase()) || c.issue.toLowerCase().includes(flaggedSearch.toLowerCase())).map(c => (
-                  <div key={c.id} className={cls.item} style={{ borderLeft: `6px solid ${FLAG_BORDER_COLORS[c.type]}` }}>
-                    <div className={`${cls.row} mb-2`}>
-                      <div>
-                        <h4 className={cls.heading}>{c.name}</h4>
-                        <p className={cls.hint}>{c.issue}</p>
-                      </div>
-                      <Badge>{c.type.replace('-', ' ').toUpperCase()}</Badge>
-                    </div>
-                    <div className={`${cls.grid2} mt-3`}>
-                      <div><p className={cls.hint}>Assigned Agent</p><p className={cls.heading}>{c.assignedAgent}</p></div>
-                      <div>
-                        <p className={cls.hint}>{c.type === 'black-flag' ? 'Churn Date' : 'Flagged Date'}</p>
-                        <p className={cls.heading}>{new Date((c.type === 'black-flag' ? c.churnDate : c.flaggedDate)!).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    {c.churnReason && <p className={`text-sm mt-2 pt-2 border-t ${cls.hint}`}>Reason: {c.churnReason}</p>}
-                    <div className={`${cls.actions} mt-3`}>
-                      <Button size="sm">Follow-up</Button>
-                      <Button size="sm" variant="outline">Escalate</Button>
-                      {c.type !== 'black-flag' && <Button size="sm" variant="outline">Resolve</Button>}
-                    </div>
-                  </div>
-                ))}
+                {flaggedClients.length === 0 ? (
+                    <p className={`${cls.hint} text-center py-4`}>No flagged clients.</p>
+                ) : (
+                    flaggedClients.filter(c => !flaggedSearch || c.name.toLowerCase().includes(flaggedSearch.toLowerCase())).map(c => (
+                        <div key={c.id} className={cls.item} style={{ borderLeft: `6px solid ${FLAG_BORDER_COLORS[c.flag_type || 'flagged']}` }}>
+                          <div className={`${cls.row} mb-2`}>
+                            <div>
+                                <h4 className={cls.heading}>{c.name}</h4>
+                                <p className={cls.hint}>Flag Type: <span className="capitalize font-bold" style={{ color: FLAG_BORDER_COLORS[c.flag_type || 'flagged'] }}>{(c.flag_type || 'flagged').replace('-', ' ')}</span></p>
+                            </div>
+                            <Badge variant="destructive">FLAGGED</Badge>
+                          </div>
+                          <div className={`${cls.grid2} mt-3`}>
+                            <div><p className={cls.hint}>Assigned Agent</p><p className={cls.heading}>{c.assignedAgent || 'Unassigned'}</p></div>
+                            <div>
+                                <p className={cls.hint}>Last interaction</p>
+                                <p className={cls.heading}>{c.lastInteraction || 'N/A'}</p>
+                            </div>
+                          </div>
+                          <div className={`${cls.actions} mt-3 justify-end`}>
+                            <Button 
+                                size="sm" 
+                                variant="outline" 
+                                className="border-emerald-500 text-emerald-700 hover:bg-emerald-50"
+                                onClick={() => unflagClient(c.id)}
+                            >
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                                Unflag (Resolved)
+                            </Button>
+                          </div>
+                        </div>
+                    ))
+                )}
               </CardContent>
             </Card>
           </TabsContent>
 
           {/* Daily Schedule */}
           <TabsContent value="schedule" className={cls.page}>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Daily Tasks */}
-              <Card>
-                <CardHeader><CardTitle>Daily Tasks</CardTitle><CardDescription>Today&apos;s checklist</CardDescription></CardHeader>
-                <CardContent className={cls.list}>
-                  {DAILY_TASKS.map(task => (
-                    <div key={task.id} className={`${cls.inline} ${cls.itemSm}`}>
-                      <Checkbox className="mt-0.5" defaultChecked={task.status === 'done'} />
-                      <div className="flex-1">
-                        <p className={`${cls.heading} ${task.status === 'done' ? 'line-through text-muted-foreground' : ''}`}>{task.title}</p>
-                        <div className={`${cls.actions} mt-1`}>
-                          <Badge className={PRIORITY_COLORS[task.priority]} variant="outline">{task.priority}</Badge>
-                          <Badge className={TASK_STATUS_COLORS[task.status]} variant="outline">{task.status}</Badge>
-                          {task.dueTime && <span className={cls.hintXs}>{task.dueTime}</span>}
+            <Card>
+              <CardHeader>
+                <div className={cls.row}>
+                  <div>
+                    <CardTitle className={cls.inline}><Calendar className="h-5 w-5 text-blue-500" />Daily Schedule</CardTitle>
+                    <CardDescription>{schedules.length} scheduled items · {formatDate(new Date().toISOString())}</CardDescription>
+                  </div>
+                  <Button onClick={() => openScheduleModal()} className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg">
+                    <Plus className="h-4 w-4 mr-2" />Add Schedule
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {schedules.length === 0 ? (
+                  <p className={`${cls.hint} text-center py-8`}>No schedules for today. Click "Add Schedule" to create one.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {schedules.map(sch => (
+                      <div key={sch.id} className={`${cls.item} ${!isUpcoming(sch.start_time) ? 'opacity-60' : ''}`}>
+                        <div className={`${cls.row} mb-2 flex-wrap gap-2`}>
+                          <div className="flex-1 min-w-0">
+                            <h4 className={cls.heading}>{sch.title}</h4>
+                            {sch.description && <p className={`${cls.hint} mt-1`}>{sch.description}</p>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={isUpcoming(sch.start_time) ? 'default' : 'secondary'}>
+                              {isUpcoming(sch.start_time) ? 'Upcoming' : 'Passed'}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between mt-3 flex-wrap gap-2">
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-1.5">
+                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                              <span className={cls.heading}>{formatTime(sch.start_time)} — {formatTime(sch.end_time)}</span>
+                            </div>
+                            <span className={cls.hint}>({getDuration(sch.start_time, sch.end_time)})</span>
+                            <span className={`${cls.hintXs}`}>{formatDate(sch.start_time)}</span>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="border-blue-500 text-blue-700 hover:bg-blue-50" onClick={() => openScheduleModal(sch)}>
+                              <Edit className="h-3.5 w-3.5 mr-1" />Edit
+                            </Button>
+                            <Button variant="outline" size="sm" className="border-red-500 text-red-700 hover:bg-red-50" onClick={() => handleDeleteScheduleRow(sch.id)}>
+                              <Trash2 className="h-3.5 w-3.5 mr-1" />Delete
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </CardContent>
-              </Card>
-
-              {/* Scheduled Calls */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className={cls.inline}><Phone className="h-5 w-5" />Scheduled Calls</CardTitle>
-                  <CardDescription>Today&apos;s call schedule</CardDescription>
-                </CardHeader>
-                <CardContent className={cls.list}>
-                  {SCHEDULED_CALLS.map(call => (
-                    <div key={call.id} className={cls.itemSm}>
-                      <div className={`${cls.row} mb-2`}>
-                        <h4 className={cls.heading}>{call.clientName}</h4>
-                        <Badge variant={call.status === 'completed' ? 'default' : 'outline'}>{call.status}</Badge>
-                      </div>
-                      <p className={`${cls.hint} mb-2`}>{call.purpose}</p>
-                      <div className={`${cls.inline} text-sm`}>
-                        <span className={cls.heading}>{call.time}</span>
-                        <span className={cls.hint}>• {call.duration}</span>
-                      </div>
-                    </div>
-                  ))}
-                  <Button className="w-full"><Phone className="h-4 w-4 mr-2" />Schedule New Call</Button>
-                </CardContent>
-              </Card>
-
-              {/* Scheduled Emails */}
-              <Card className="lg:col-span-2">
-                <CardHeader>
-                  <CardTitle className={cls.inline}><Mail className="h-5 w-5" />Scheduled Emails</CardTitle>
-                  <CardDescription>Email queue for today</CardDescription>
-                </CardHeader>
-                <CardContent className={cls.list}>
-                  {SCHEDULED_EMAILS.map(email => (
-                    <div key={email.id} className={`${cls.row} ${cls.itemSm}`}>
-                      <div className="flex-1">
-                        <h4 className={cls.heading}>{email.subject}</h4>
-                        <p className={cls.hint}>To: {email.clientName}</p>
-                        <p className={`${cls.hintXs} mt-1`}>Template: {email.template}</p>
-                      </div>
-                      <div className={cls.inline}>
-                        <div className="text-right">
-                          <p className={cls.label}>{email.scheduledTime}</p>
-                          <Badge variant={email.status === 'sent' ? 'default' : 'outline'}>{email.status}</Badge>
-                        </div>
-                        {email.status === 'draft' && <Button size="sm">Send Now</Button>}
-                      </div>
-                    </div>
-                  ))}
-                  <Button className="w-full"><Mail className="h-4 w-4 mr-2" />Compose New Email</Button>
-                </CardContent>
-              </Card>
-            </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </main>
+
+      {/* Schedule Modal */}
+      <Dialog open={isScheduleOpen} onOpenChange={setIsScheduleOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className={cls.inline}>
+              {editingScheduleId ? <Edit className="h-5 w-5 text-blue-500" /> : <Plus className="h-5 w-5 text-blue-500" />}
+              {editingScheduleId ? 'Edit Schedule Entry' : 'Add New Schedule Entry'}
+            </DialogTitle>
+            <DialogDescription>Plan your daily tasks and interactions.</DialogDescription>
+          </DialogHeader>
+          <div className={cls.section}>
+            <div className={cls.field}>
+              <Label>Title *</Label>
+              <Input placeholder="E.g. Morning Briefing" value={scheduleForm.title} onChange={e => setScheduleForm({ ...scheduleForm, title: e.target.value })} />
+            </div>
+            <div className={cls.field}>
+              <Label>Description</Label>
+              <Input placeholder="Optional details..." value={scheduleForm.description} onChange={e => setScheduleForm({ ...scheduleForm, description: e.target.value })} />
+            </div>
+            <div className={cls.grid2}>
+              <div className={cls.field}>
+                <Label>Start Time *</Label>
+                <Input type="datetime-local" value={scheduleForm.start_time} onChange={e => setScheduleForm({ ...scheduleForm, start_time: e.target.value })} />
+              </div>
+              <div className={cls.field}>
+                <Label>End Time *</Label>
+                <Input type="datetime-local" value={scheduleForm.end_time} onChange={e => setScheduleForm({ ...scheduleForm, end_time: e.target.value })} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsScheduleOpen(false)}>Cancel</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleScheduleSubmit}>
+              {editingScheduleId ? 'Update Entry' : 'Save Entry'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

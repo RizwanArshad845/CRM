@@ -1,14 +1,20 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
 import { Input } from '../../components/ui/input';
-import { Play, Download, Search, Upload, Clock } from 'lucide-react';
+import { Label } from '../../components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../../components/ui/dialog';
+import { Search, Clock, Trash2, ExternalLink, Pencil } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { StarRating } from '../../components/shared/StarRating';
 import { cls } from '../../styles/classes';
-import { INITIAL_RECORDINGS, type Recording, type RecordingStatus } from '../../data/mockData';
 import { toast } from 'sonner';
+import { useRecordings, CallRecording } from '../../context/RecordingContext';
+import { useClients } from '../../context/ClientContext';
+import { useAuth } from '../../context/AuthContext';
+
+type RecordingStatus = 'available' | 'processing' | 'failed';
 
 const STATUS_COLORS: Record<RecordingStatus, string> = {
   available: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
@@ -16,44 +22,77 @@ const STATUS_COLORS: Record<RecordingStatus, string> = {
   failed: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300',
 };
 
-type LocalRecording = Recording & { objectUrl?: string };
-
 export function SalesRecordings() {
-  const [recordings, setRecordings] = useState<LocalRecording[]>(INITIAL_RECORDINGS);
+  const { recordings, uploadRecording, updateRecording, deleteRecording } = useRecordings();
+  const { clients } = useClients();
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAgent, setFilterAgent] = useState('all');
   const [filterOutcome, setFilterOutcome] = useState('all');
-  const [playingId, setPlayingId] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Dialog form state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingRecording, setEditingRecording] = useState<CallRecording | null>(null);
+  const [selectedClientId, setSelectedClientId] = useState<number>(0);
+  const [formLink, setFormLink] = useState('');
 
-  const agentNames = [...new Set(recordings.map(r => r.agentName))];
+  const agentNames = [...new Set(recordings.map(r => r.agent_name))];
 
   const filtered = recordings.filter(r => {
     const term = searchTerm.toLowerCase();
-    return (r.clientName.toLowerCase().includes(term) || r.agentName.toLowerCase().includes(term))
-      && (filterAgent === 'all' || r.agentName === filterAgent)
+    return (r.client_name?.toLowerCase().includes(term) || r.agent_name?.toLowerCase().includes(term))
+      && (filterAgent === 'all' || r.agent_name === filterAgent)
       && (filterOutcome === 'all' || r.outcome === filterOutcome);
   });
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const objectUrl = URL.createObjectURL(file);
-    const newRec: LocalRecording = {
-      id: Date.now(),
-      agentName: 'Me',
-      clientName: file.name.replace(/\.[^.]+$/, ''),
-      date: new Date().toISOString().split('T')[0],
-      duration: '—',
-      status: 'available',
-      qualityRating: 0,
-      tags: ['uploaded'],
-      outcome: 'pending',
-      objectUrl,
-    };
-    setRecordings(prev => [newRec, ...prev]);
-    toast.success(`Recording "${file.name}" uploaded!`);
-    e.target.value = '';
+  const handleOpenAdd = () => {
+    setEditingRecording(null);
+    setSelectedClientId(0);
+    setFormLink('');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEdit = (rec: CallRecording) => {
+    setEditingRecording(rec);
+    setSelectedClientId(rec.client_id || (rec as any).client_id);
+    setFormLink(rec.recording_url);
+    setIsModalOpen(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!selectedClientId || !formLink) {
+      toast.error('Client and Google Drive Link are required.');
+      return;
+    }
+    
+    if (editingRecording) {
+      await updateRecording(editingRecording.id, {
+        client_id: selectedClientId,
+        recording_url: formLink
+      });
+    } else {
+      await uploadRecording({
+        user_id: user?.id,
+        client_id: selectedClientId,
+        recording_url: formLink,
+        duration_seconds: 0,
+        transcript: 'Google Drive Link',
+        outcome: 'pending',
+        quality_rating: 0,
+        tags: ['drive link']
+      });
+    }
+
+    setIsModalOpen(false);
+    setEditingRecording(null);
+    setSelectedClientId(0);
+    setFormLink('');
+  };
+
+  const handleDeleteRow = async (id: number) => {
+    if (confirm('Delete this recording?')) {
+      await deleteRecording(id);
+    }
   };
 
   return (
@@ -63,12 +102,11 @@ export function SalesRecordings() {
           <div className={cls.row}>
             <div>
               <CardTitle>Call Recordings</CardTitle>
-              <CardDescription>Upload, preview, and manage call recordings</CardDescription>
+              <CardDescription>Link Google Drive recordings and manage previews</CardDescription>
             </div>
-            <Button onClick={() => fileInputRef.current?.click()}>
-              <Upload className="h-4 w-4 mr-2" />Upload Recording
+            <Button onClick={handleOpenAdd}>
+              <ExternalLink className="h-4 w-4 mr-2" />Add Drive Link
             </Button>
-            <input ref={fileInputRef} type="file" accept="audio/*,video/*" className="hidden" onChange={handleUpload} />
           </div>
         </CardHeader>
         <CardContent>
@@ -96,59 +134,101 @@ export function SalesRecordings() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(r => (
-              <Card key={r.id} className="hover:shadow-lg transition-shadow">
-                <CardContent className="pt-4 space-y-3">
-                  <div className={cls.row}>
-                    <div className="flex-1">
-                      <p className={`${cls.heading} mb-0.5`}>{r.clientName}</p>
-                      <p className={cls.hint}>{r.agentName}</p>
+            {filtered.map(r => {
+              // Check ownership using user_id from backend or agent_id from context
+              const ownerId = (r as any).user_id || r.agent_id;
+              const isOwner = user?.id === ownerId;
+
+              return (
+                <Card key={r.id} className="hover:shadow-lg transition-shadow">
+                  <CardContent className="pt-4 space-y-3">
+                    <div className={cls.row}>
+                      <div className="flex-1">
+                        <p className={`${cls.heading} mb-0.5`}>{r.client_name}</p>
+                        <p className={cls.hint}>{r.agent_name}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                          <Badge className={(STATUS_COLORS[r.status as RecordingStatus]) || 'bg-blue-100'}>{r.status}</Badge>
+                          {isOwner && (
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-blue-500 hover:text-blue-700 hover:bg-blue-50" onClick={() => handleOpenEdit(r)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDeleteRow(r.id)}>
+                                  <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          )}
+                      </div>
                     </div>
-                    <Badge className={STATUS_COLORS[r.status]}>{r.status}</Badge>
-                  </div>
 
-                  <div className={`${cls.inline} text-sm text-muted-foreground`}>
-                    <Clock className="h-3.5 w-3.5" />
-                    <span>{new Date(r.date).toLocaleDateString()}</span>
-                    {r.duration !== '—' && <><span>•</span><span>{r.duration}</span></>}
-                  </div>
-
-                  <div className="flex flex-wrap gap-1">
-                    {r.tags.map(tag => <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>)}
-                  </div>
-
-                  {r.qualityRating > 0 && (
-                    <div>
-                      <p className={`${cls.hintXs} mb-1`}>Quality Rating</p>
-                      <StarRating rating={r.qualityRating} />
+                    <div className={`${cls.inline} text-sm text-muted-foreground`}>
+                      <Clock className="h-3.5 w-3.5" />
+                      <span>{new Date(r.created_at).toLocaleDateString()}</span>
                     </div>
-                  )}
 
-                  {/* Audio player for uploaded files */}
-                  {r.objectUrl && (
-                    <audio controls className="w-full h-8 mt-1" src={r.objectUrl} />
-                  )}
-
-                  {/* Play/Download for available mock recordings */}
-                  {r.status === 'available' && !r.objectUrl && (
-                    <div className={`${cls.actions} pt-1`}>
-                      <Button size="sm" className="flex-1" onClick={() => setPlayingId(playingId === r.id ? null : r.id)}>
-                        <Play className="h-4 w-4 mr-2" />{playingId === r.id ? 'Playing…' : 'Preview'}
-                      </Button>
-                      <Button size="sm" variant="outline"><Download className="h-4 w-4" /></Button>
+                    <div className="flex flex-wrap gap-1">
+                      {r.tags?.map(tag => <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>)}
+                      {r.outcome && <Badge variant="secondary" className="text-xs uppercase">{r.outcome}</Badge>}
                     </div>
-                  )}
-                  {r.status === 'processing' && <Button size="sm" className="w-full" disabled>Processing...</Button>}
-                  {r.status === 'failed' && <Button size="sm" variant="destructive" className="w-full" disabled>Recording Failed</Button>}
-                </CardContent>
-              </Card>
-            ))}
+
+                    {r.quality_rating > 0 && (
+                      <div>
+                        <p className={`${cls.hintXs} mb-1`}>Quality Rating</p>
+                        <StarRating rating={r.quality_rating} />
+                      </div>
+                    )}
+
+                    {r.recording_url?.includes('drive.google.com') && (
+                      <div className="pt-2">
+                          <Button variant="outline" size="sm" className="w-full text-blue-600 border-blue-200 hover:bg-blue-50" onClick={() => window.open(r.recording_url, '_blank')}>
+                              <ExternalLink className="h-3.5 w-3.5 mr-2" />Open in Google Drive
+                          </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
             {filtered.length === 0 && (
               <div className="col-span-3 text-center py-12 text-muted-foreground">No recordings found</div>
             )}
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isModalOpen} onOpenChange={(open) => {
+        setIsModalOpen(open);
+        if (!open) setEditingRecording(null);
+      }}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>{editingRecording ? 'Edit' : 'Add'} Google Drive Recording</DialogTitle>
+                <DialogDescription>
+                    Paste the shareable Google Drive link to attach it to a client.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+                <div className={cls.field}>
+                    <Label>Select Client *</Label>
+                    <Select value={selectedClientId.toString()} onValueChange={v => setSelectedClientId(Number(v))}>
+                        <SelectTrigger><SelectValue placeholder="Select client" /></SelectTrigger>
+                        <SelectContent>
+                            {clients.map(c => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className={cls.field}>
+                    <Label>Google Drive Link *</Label>
+                    <Input placeholder="https://drive.google.com/file/d/..." value={formLink} onChange={e => setFormLink(e.target.value)} />
+                </div>
+            </div>
+            <DialogFooter>
+                <Button variant="outline" onClick={() => setIsModalOpen(false)}>Cancel</Button>
+                <Button onClick={handleSubmit}>{editingRecording ? 'Save Changes' : 'Add Link'}</Button>
+            </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

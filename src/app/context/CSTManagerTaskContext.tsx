@@ -1,11 +1,14 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { apiFetch } from '../utils/api';
+import { toast } from 'sonner';
+import { useAuth } from './AuthContext';
 
 export type CSTTaskPriority = 'high' | 'medium' | 'low';
 export type CSTTaskStatus   = 'pending' | 'in-progress' | 'completed' | 'missed';
 export type CSTTaskOrigin   = 'self' | 'admin';
 
 export interface CSTManagerTask {
-    id: string;
+    id: number;
     title: string;
     priority: CSTTaskPriority;
     status: CSTTaskStatus;
@@ -16,42 +19,97 @@ export interface CSTManagerTask {
     month: string;
 }
 
-// ── Seed data ──────────────────────────────────────────────────────────────────
-const SEED_CST_TASKS: CSTManagerTask[] = [
-    { id: 'ct1', title: 'Monthly CST team performance review', priority: 'high', status: 'completed', dueDate: '2026-03-07', category: 'Management', notes: '', assignedBy: 'self', month: 'March 2026' },
-    { id: 'ct2', title: 'Client onboarding checklist audit', priority: 'high', status: 'in-progress', dueDate: '2026-03-28', category: 'Onboarding', notes: '', assignedBy: 'self', month: 'March 2026' },
-    { id: 'ct3', title: 'Escalation review for flagged clients', priority: 'medium', status: 'pending', dueDate: '2026-03-25', category: 'Escalation', notes: '', assignedBy: 'self', month: 'March 2026' },
-    { id: 'ct4', title: 'Update CST process documentation', priority: 'low', status: 'missed', dueDate: '2026-03-15', category: 'Admin', notes: '', assignedBy: 'self', month: 'March 2026' },
-    { id: 'ct5', title: 'Submit March client health report to admin', priority: 'high', status: 'completed', dueDate: '2026-03-10', category: 'Report', notes: 'Due by EOD', assignedBy: 'admin', month: 'March 2026' },
-];
-
 // ── Context ────────────────────────────────────────────────────────────────────
 interface CSTManagerTaskContextType {
     tasks: CSTManagerTask[];
-    addTask: (task: Omit<CSTManagerTask, 'id' | 'month'>) => void;
-    updateTaskStatus: (id: string, status: CSTTaskStatus) => void;
+    loading: boolean;
+    addTask: (task: Omit<CSTManagerTask, 'id' | 'month'>, targetUserId?: number) => Promise<void>;
+    updateTaskStatus: (id: number, status: CSTTaskStatus) => Promise<void>;
 }
 
 const CSTManagerTaskContext = createContext<CSTManagerTaskContextType | null>(null);
 
 export function CSTManagerTaskProvider({ children }: { children: ReactNode }) {
-    const [tasks, setTasks] = useState<CSTManagerTask[]>(SEED_CST_TASKS);
+    const { user } = useAuth();
+    const [tasks, setTasks] = useState<CSTManagerTask[]>([]);
+    const [loading, setLoading] = useState(true);
 
-    const addTask = (task: Omit<CSTManagerTask, 'id' | 'month'>) => {
-        const month = new Date(task.dueDate).toLocaleString('en-US', { month: 'long', year: 'numeric' });
-        setTasks(prev => [...prev, { ...task, id: `ct${Date.now()}`, month }]);
+    const fetchData = async () => {
+        if (!user) return;
+        try {
+            const res = await apiFetch(`/tasks?assigned_to=${user.id}`);
+            if (res.success) {
+                const mapped: CSTManagerTask[] = res.data.map((t: any) => ({
+                    id: Number(t.id),
+                    title: t.title,
+                    priority: (t.priority || 'medium') as CSTTaskPriority,
+                    status: t.status as CSTTaskStatus,
+                    dueDate: t.due_date?.split('T')[0] || '',
+                    category: t.category || 'General',
+                    notes: t.description || '',
+                    assignedBy: t.assigned_by === 'admin' ? 'admin' : 'self',
+                    month: t.due_date ? new Date(t.due_date).toLocaleString('en-US', { month: 'long', year: 'numeric' }) : ''
+                }));
+                setTasks(mapped);
+            }
+        } catch (error) {
+            console.error('Failed to fetch tasks:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const updateTaskStatus = (id: string, status: CSTTaskStatus) => {
-        setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+    useEffect(() => {
+        fetchData();
+    }, [user]);
+
+    const addTask = async (task: Omit<CSTManagerTask, 'id' | 'month'>, targetUserId?: number) => {
+        try {
+            const res = await apiFetch('/tasks', {
+                method: 'POST',
+                body: JSON.stringify({
+                    title: task.title,
+                    description: task.notes,
+                    priority: task.priority,
+                    category: task.category,
+                    due_date: task.dueDate,
+                    assigned_by: task.assignedBy,
+                    assigned_to: targetUserId || user?.id
+                })
+            });
+
+            if (res.success) {
+                fetchData();
+                toast.success('Task created');
+            }
+        } catch (error) {
+            toast.error('Failed to create task');
+        }
+    };
+
+    const updateTaskStatus = async (id: number, status: CSTTaskStatus) => {
+        try {
+            const res = await apiFetch(`/tasks/${id}/status`, {
+                method: 'PATCH',
+                body: JSON.stringify({ status })
+            });
+
+            if (res.success) {
+                setTasks(prev => prev.map(t => t.id === id ? { ...t, status } : t));
+                toast.success('Task updated');
+            }
+        } catch (error) {
+            toast.error('Failed to update status');
+        }
     };
 
     return (
-        <CSTManagerTaskContext.Provider value={{ tasks, addTask, updateTaskStatus }}>
+        <CSTManagerTaskContext.Provider value={{ tasks, loading, addTask, updateTaskStatus }}>
             {children}
         </CSTManagerTaskContext.Provider>
     );
 }
+
 
 export function useCSTManagerTasks() {
     const ctx = useContext(CSTManagerTaskContext);

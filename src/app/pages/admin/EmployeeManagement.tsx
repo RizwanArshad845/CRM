@@ -2,192 +2,363 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Label } from '../../components/ui/label';
 import { Badge } from '../../components/ui/badge';
+import { Search, UserPlus, Mail, Shield, DollarSign, Clock, Pencil, Trash2 } from 'lucide-react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogFooter, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogTrigger 
+} from '../../components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../../components/ui/dialog';
-import { UserPlus, Edit, Trash2, Mail, Search } from 'lucide-react';
-import { toast } from 'sonner';
-import type { Employee } from '../../types/crm';
-import { cls } from '../../styles/classes';
-import { DEPARTMENTS } from '../../data/mockData';
+import { Label } from '../../components/ui/label';
 import { useEmployees } from '../../context/EmployeeContext';
-
-type EmpForm = { name: string; email: string; department: string; role: string; baseSalary: string };
-const EMPTY_EMP: EmpForm = { name: '', email: '', department: '', role: '', baseSalary: '' };
-
-const FIELDS: { k: keyof EmpForm; label: string; placeholder: string; type?: string }[] = [
-  { k: 'name', label: 'Full Name *', placeholder: 'John Doe' },
-  { k: 'email', label: 'Email *', placeholder: 'john@nexuswave.com', type: 'email' },
-  { k: 'role', label: 'Role *', placeholder: 'e.g. Sales Agent' },
-  { k: 'baseSalary', label: 'Base Salary ($) *', placeholder: '5000', type: 'number' },
-];
+import { cls } from '../../styles/classes';
+import { toast } from 'sonner';
 
 export function EmployeeManagement() {
-  const { employees, addEmployee, updateEmployee, deleteEmployee } = useEmployees();
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [editTarget, setEditTarget] = useState<Employee | null>(null);
-  const [form, setForm] = useState<EmpForm>(EMPTY_EMP);
-  const [searchTerm, setSearchTerm] = useState('');
+  const { employees, isLoading, addEmployee, updateEmployee, deleteEmployee, roles, departments } = useEmployees();
+  const [search, setSearch] = useState('');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [newEmp, setNewEmp] = useState({ firstName: '', lastName: '', email: '', roleId: '', departmentId: '', password: '' });
+  const [editingEmp, setEditingEmp] = useState<any>(null);
 
-  const setField = (k: keyof EmpForm, v: string) => setForm(prev => ({ ...prev, [k]: v }));
-
-  const handleAdd = () => {
-    const emp: Employee = {
-      id: Date.now(),
-      name: form.name,
-      employeeId: `EMP${String(employees.length + 1).padStart(3, '0')}`,
-      email: form.email,
-      department: form.department,
-      role: form.role,
-      isActive: true,
-      baseSalary: Number(form.baseSalary),
-      advancePayments: 0,
-      accruedPayments: 0,
-      totalSalary: Number(form.baseSalary),
-      paymentStatus: 'pending',
-      hireDate: new Date().toISOString().split('T')[0],
-      tardies: 0,
-    };
-    addEmployee(emp);
-    toast.success(`${form.name} added!`);
-    setIsAddOpen(false);
-    setForm(EMPTY_EMP);
+  const handleAddEmployee = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newEmp.firstName || !newEmp.lastName || !newEmp.roleId || !newEmp.departmentId) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    addEmployee(newEmp);
+    setIsAddDialogOpen(false);
+    setNewEmp({ firstName: '', lastName: '', email: '', roleId: '', departmentId: '', password: '' });
   };
 
-  const handleEdit = () => {
-    if (!editTarget) return;
-    updateEmployee({
-      ...editTarget,
-      name: form.name, email: form.email, department: form.department,
-      role: form.role, baseSalary: Number(form.baseSalary),
-      totalSalary: Number(form.baseSalary) + editTarget.accruedPayments - editTarget.advancePayments,
+  const handleEditClick = (emp: any) => {
+    const [firstName, ...lastNameParts] = emp.name.split(' ');
+    setEditingEmp({
+      id: emp.id,
+      firstName,
+      lastName: lastNameParts.join(' '),
+      email: emp.email,
+      roleId: emp.role_id?.toString() || '',
+      departmentId: emp.department_id?.toString() || '',
+      password: '',
     });
-    toast.success('Employee updated!');
-    setIsEditOpen(false);
-    setForm(EMPTY_EMP);
+    setIsEditDialogOpen(true);
   };
 
-  const openEdit = (emp: Employee) => {
-    setEditTarget(emp);
-    setForm({ name: emp.name, email: emp.email, department: emp.department, role: emp.role, baseSalary: String(emp.baseSalary) });
-    setIsEditOpen(true);
+  const handleUpdateEmployee = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEmp.firstName || !editingEmp.lastName || !editingEmp.roleId || !editingEmp.departmentId) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    updateEmployee({
+      id: editingEmp.id,
+      firstName: editingEmp.firstName,
+      lastName: editingEmp.lastName,
+      email: editingEmp.email,
+      role_id: parseInt(editingEmp.roleId),
+      department_id: parseInt(editingEmp.departmentId),
+      password: editingEmp.password,
+    });
+    setIsEditDialogOpen(false);
+    setEditingEmp(null);
   };
 
-  const toggleStatus = (emp: Employee) => updateEmployee({ ...emp, isActive: !emp.isActive });
+  const handleDeleteEmployee = (id: number) => {
+    if (window.confirm('Are you sure you want to delete this employee? This action cannot be undone.')) {
+      deleteEmployee(id);
+    }
+  };
 
-  function EmpFormFields({ prefix = '' }: { prefix?: string }) {
-    return (
-      <div className={cls.section}>
-        {FIELDS.map(({ k, label, placeholder, type = 'text' }) => (
-          <div key={k} className={cls.field}>
-            <Label htmlFor={`${prefix}${k}`}>{label}</Label>
-            <Input id={`${prefix}${k}`} type={type} placeholder={placeholder}
-              value={form[k]} onChange={e => setField(k, e.target.value)} />
-          </div>
-        ))}
-        <div className={cls.field}>
-          <Label>Department *</Label>
-          <Select value={form.department} onValueChange={v => setField('department', v)}>
-            <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
-            <SelectContent>{DEPARTMENTS.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}</SelectContent>
-          </Select>
-        </div>
-      </div>
-    );
-  }
+  const filtered = employees.filter(e =>
+    e.name.toLowerCase().includes(search.toLowerCase()) ||
+    e.email.toLowerCase().includes(search.toLowerCase()) ||
+    e.role.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const handleToggleStatus = (emp: any) => {
+    const newStatus = emp.status === 'active' ? 'inactive' : 'active';
+    updateEmployee({ ...emp, status: newStatus });
+    toast.success(`Employee ${newStatus === 'active' ? 'activated' : 'deactivated'}.`);
+  };
+
+  if (isLoading) return <div className="p-8 text-center text-muted-foreground">Loading employees...</div>;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className={cls.row}>
-          <div>
-            <CardTitle>Employee Management</CardTitle>
-            <CardDescription>Full CRUD for all employees — changes sync to Finance payroll</CardDescription>
-          </div>
-          <div className="flex gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search employees..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-9 h-10 text-sm w-[250px]" />
+    <div className={cls.page}>
+      <Card>
+        <CardHeader>
+          <div className={cls.row}>
+            <div>
+              <CardTitle>Employee Directory</CardTitle>
+              <CardDescription>Manage your team, roles, and access controls</CardDescription>
             </div>
-            <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="h-10"><UserPlus className="h-4 w-4 mr-2" />Add Employee</Button>
+                <Button>
+                  <UserPlus className="h-4 w-4 mr-2" />Add Employee
+                </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Add New Employee</DialogTitle>
-                <DialogDescription>Employee will be added to payroll automatically</DialogDescription>
-              </DialogHeader>
-              <EmpFormFields />
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-                <Button onClick={handleAdd}>Add Employee</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Add New Employee</DialogTitle>
+                  <DialogDescription>
+                    Enter employee details. Professionals emails are generated automatically.
+                  </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={handleAddEmployee} className="grid gap-4 py-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="firstName">First Name *</Label>
+                      <Input 
+                        id="firstName" 
+                        value={newEmp.firstName} 
+                        onChange={e => setNewEmp({...newEmp, firstName: e.target.value})} 
+                        placeholder="John" 
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="lastName">Last Name *</Label>
+                      <Input 
+                        id="lastName" 
+                        value={newEmp.lastName} 
+                        onChange={e => setNewEmp({...newEmp, lastName: e.target.value})} 
+                        placeholder="Doe" 
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email (optional)</Label>
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      value={newEmp.email} 
+                      onChange={e => setNewEmp({...newEmp, email: e.target.value})} 
+                      placeholder="Leave blank to generate automatically"
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="role">Role *</Label>
+                    <Select value={newEmp.roleId} onValueChange={v => setNewEmp({...newEmp, roleId: v})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a role" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {roles.map(r => (
+                          <SelectItem key={r.id} value={r.id.toString()}>{r.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="dept">Department *</Label>
+                    <Select value={newEmp.departmentId} onValueChange={v => setNewEmp({...newEmp, departmentId: v})}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a department" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {departments.map(d => (
+                          <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="password">Initial Password (optional)</Label>
+                    <Input 
+                      id="password" 
+                      type="password" 
+                      value={newEmp.password} 
+                      onChange={e => setNewEmp({...newEmp, password: e.target.value})} 
+                      placeholder="Default: welcome123" 
+                      autoComplete="new-password"
+                    />
+                  </div>
+                  <DialogFooter className="mt-4">
+                    <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>Cancel</Button>
+                    <Button type="submit">Create Employee</Button>
+                  </DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>Edit Employee</DialogTitle>
+                  <DialogDescription>Update details for {editingEmp?.firstName} {editingEmp?.lastName}.</DialogDescription>
+                </DialogHeader>
+                {editingEmp && (
+                  <form onSubmit={handleUpdateEmployee} className="grid gap-4 py-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="edit-firstName">First Name *</Label>
+                        <Input 
+                          id="edit-firstName" 
+                          value={editingEmp.firstName} 
+                          onChange={e => setEditingEmp({...editingEmp, firstName: e.target.value})} 
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="edit-lastName">Last Name *</Label>
+                        <Input 
+                          id="edit-lastName" 
+                          value={editingEmp.lastName} 
+                          onChange={e => setEditingEmp({...editingEmp, lastName: e.target.value})} 
+                          autoComplete="off"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-email">Email</Label>
+                      <Input 
+                        id="edit-email" 
+                        type="email" 
+                        value={editingEmp.email} 
+                        onChange={e => setEditingEmp({...editingEmp, email: e.target.value})} 
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-role">Role *</Label>
+                      <Select value={editingEmp.roleId} onValueChange={v => setEditingEmp({...editingEmp, roleId: v})}>
+                        <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
+                        <SelectContent>
+                          {roles.map(r => <SelectItem key={r.id} value={r.id.toString()}>{r.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-dept">Department *</Label>
+                      <Select value={editingEmp.departmentId} onValueChange={v => setEditingEmp({...editingEmp, departmentId: v})}>
+                        <SelectTrigger><SelectValue placeholder="Select a department" /></SelectTrigger>
+                        <SelectContent>
+                          {departments.map(d => <SelectItem key={d.id} value={d.id.toString()}>{d.name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-password">New Password (optional)</Label>
+                      <Input 
+                        id="edit-password" 
+                        type="password" 
+                        value={editingEmp.password} 
+                        onChange={e => setEditingEmp({...editingEmp, password: e.target.value})} 
+                        placeholder="Leave blank to keep current"
+                        autoComplete="new-password"
+                      />
+                    </div>
+                    <DialogFooter className="mt-4">
+                      <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                      <Button type="submit">Save Changes</Button>
+                    </DialogFooter>
+                  </form>
+                )}
+              </DialogContent>
+            </Dialog>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="border-b-2">
-              <tr>
-                {['Employee', 'ID', 'Email', 'Department', 'Role', 'Status', 'Salary', 'Tardies', 'Actions'].map(h => (
-                  <th key={h} className={cls.tableHead}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {employees.filter(emp => !searchTerm || emp.name.toLowerCase().includes(searchTerm.toLowerCase()) || emp.employeeId.toLowerCase().includes(searchTerm.toLowerCase()) || emp.email.toLowerCase().includes(searchTerm.toLowerCase())).map(emp => (
-                <tr key={emp.id} className={cls.tableRow}>
-                  <td className={`${cls.tableCell} ${cls.heading}`}>{emp.name}</td>
-                  <td className={`${cls.tableCell} ${cls.mono}`}>{emp.employeeId}</td>
-                  <td className={cls.tableCell}>
-                    <div className={cls.inline}>
-                      <Mail className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-sm">{emp.email}</span>
-                    </div>
-                  </td>
-                  <td className={cls.tableCell}>{emp.department}</td>
-                  <td className={cls.tableCell}><span className="text-sm">{emp.role}</span></td>
-                  <td className={cls.tableCell}>
-                    <Badge variant={emp.isActive ? 'default' : 'secondary'} className="cursor-pointer" onClick={() => toggleStatus(emp)}>
-                      {emp.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </td>
-                  <td className={`${cls.tableCell} ${cls.heading}`}>${emp.baseSalary.toLocaleString()}</td>
-                  <td className={cls.tableCell}>
-                    <Badge variant={emp.tardies === 0 ? 'outline' : 'destructive'}>{emp.tardies ?? 0}</Badge>
-                  </td>
-                  <td className={cls.tableCell}>
-                    <div className={cls.iconRow}>
-                      <Button variant="outline" size="sm" onClick={() => openEdit(emp)}><Edit className="h-4 w-4" /></Button>
-                      <Button variant="outline" size="sm" onClick={() => deleteEmployee(emp.id)}><Trash2 className="h-4 w-4 text-red-600" /></Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        </CardHeader>
+        <CardContent>
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by name, email, or role..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-        <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Edit Employee</DialogTitle>
-              <DialogDescription>Update employee information</DialogDescription>
-            </DialogHeader>
-            <EmpFormFields prefix="edit-" />
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsEditOpen(false)}>Cancel</Button>
-              <Button onClick={handleEdit}>Save Changes</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filtered.map(emp => (
+              <Card key={emp.id} className={`${cls.itemHover} transition-all border-l-4 ${emp.status === 'active' ? 'border-l-blue-500' : 'border-l-muted'}`}>
+                <CardContent className="pt-6">
+                  <div className={cls.row}>
+                    <div className="flex-1">
+                      <h4 className={cls.heading}>{emp.name}</h4>
+                      <div className={`${cls.inline} ${cls.hint} text-xs mt-1`}>
+                        <Mail className="h-3 w-3" />
+                        <span>{emp.email}</span>
+                      </div>
+                    </div>
+                    <Badge variant={emp.status === 'active' ? 'default' : 'secondary'}>
+                      {emp.status === 'active' ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-4">
+                    <div className={cls.muted}>
+                      <p className={cls.hintXs}>Role</p>
+                      <div className={`${cls.inline} font-semibold text-xs mt-0.5`}>
+                        <Shield className="h-3 w-3 text-blue-500" />
+                        <span>{emp.role}</span>
+                      </div>
+                    </div>
+                    <div className={cls.muted}>
+                      <p className={cls.hintXs}>Dept</p>
+                      <div className="font-semibold text-xs mt-0.5">{emp.department}</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 mt-3 pt-3 border-t">
+                    <div>
+                      <p className={cls.hintXs}>Base Salary</p>
+                      <div className={`${cls.inline} font-bold text-sm text-green-600`}>
+                        <DollarSign className="h-3.5 w-3.5" />
+                        <span>₨ {emp.base_salary?.toLocaleString() ?? 0}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <p className={cls.hintXs}>Status</p>
+                      <div className={`${cls.inline} text-xs mt-1`}>
+                        <Clock className="h-3 w-3" />
+                        <span className="capitalize">{emp.status}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className={`${cls.actions} mt-4 pt-2 border-t justify-end`}>
+                    <Button variant="ghost" size="sm" className="text-xs h-8 text-blue-600" onClick={() => handleEditClick(emp)}>
+                      <Pencil className="h-3 w-3 mr-1" />Edit
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-xs h-8 text-red-600" 
+                      onClick={() => handleDeleteEmployee(emp.id)}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />Delete
+                    </Button>
+                    <Button
+                      variant={emp.status === 'active' ? 'outline' : 'default'}
+                      size="sm"
+                      className="text-xs h-8 ml-2"
+                      onClick={() => handleToggleStatus(emp)}
+                    >
+                      {emp.status === 'active' ? 'Deactivate' : 'Activate'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+            {filtered.length === 0 && (
+              <div className="col-span-full text-center py-12 text-muted-foreground">
+                No employees found matching your search.
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

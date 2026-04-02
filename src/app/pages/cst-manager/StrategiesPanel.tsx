@@ -1,40 +1,31 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Textarea } from '../../components/ui/textarea';
 import { Badge } from '../../components/ui/badge';
-import { BookOpen, Plus } from 'lucide-react';
+import { BookOpen, Trash2, Save } from 'lucide-react';
 import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { useClientInbox, type ClientStrategy } from '../../context/ClientInboxContext';
 
 export function StrategiesPanel() {
-    const { inboxClients, strategies, updateStrategy } = useClientInbox();
-    const assigned = inboxClients.filter(c => c.status === 'assigned' || c.status === 'reviewed');
+    const { inboxClients, strategies, updateStrategy, deleteStrategy } = useClientInbox();
+    const allClients = inboxClients;
 
     const [expanded, setExpanded] = useState<number | null>(null);
-    const [drafts, setDrafts] = useState<Record<number, { overview: string; newStep: string }>>({});
+    const [drafts, setDrafts] = useState<Record<number, string>>({});
 
     const getStrategy = (clientId: number): ClientStrategy =>
-        strategies.find(s => s.clientId === clientId) ?? { clientId, overview: '', steps: [], updatedAt: '' };
+        strategies.find(s => s.clientId === clientId) ?? { clientId, strategyText: '', createdAt: '' };
 
-    const getDraft = (id: number) => drafts[id] ?? { overview: getStrategy(id).overview, newStep: '' };
-    const setDraft = (id: number, k: 'overview' | 'newStep', v: string) =>
-        setDrafts(prev => ({ ...prev, [id]: { ...getDraft(id), [k]: v } }));
+    const getDraft = (id: number) => drafts[id] ?? getStrategy(id).strategyText;
+    const setDraft = (id: number, v: string) =>
+        setDrafts(prev => ({ ...prev, [id]: v }));
 
-    const addStep = (clientId: number) => {
-        const step = getDraft(clientId).newStep.trim();
-        if (!step) return;
-        const existing = getStrategy(clientId);
-        updateStrategy({ ...existing, steps: [...existing.steps, step], updatedAt: new Date().toISOString().split('T')[0] });
-        setDraft(clientId, 'newStep', '');
-    };
-
-    const saveOverview = (clientId: number) => {
-        const existing = getStrategy(clientId);
-        updateStrategy({ ...existing, overview: getDraft(clientId).overview, updatedAt: new Date().toISOString().split('T')[0] });
+    const handleSave = (clientId: number) => {
+        const text = getDraft(clientId);
+        updateStrategy(clientId, text);
         toast.success('Strategy saved!');
     };
 
@@ -42,19 +33,19 @@ export function StrategiesPanel() {
         <div className={cls.page}>
             <div className="flex items-center gap-2 mb-2">
                 <h2 className="text-lg font-semibold">Client Strategies</h2>
-                <Badge variant="outline">{assigned.length} clients</Badge>
+                <Badge variant="outline">{allClients.length} clients</Badge>
             </div>
 
-            {assigned.length === 0 ? (
-                <p className={`${cls.hint} py-8 text-center`}>Assign clients first to define strategies.</p>
+            {allClients.length === 0 ? (
+                <p className={`${cls.hint} py-8 text-center`}>No clients found.</p>
             ) : (
-                assigned.map(client => {
+                allClients.map(client => {
                     const strat = getStrategy(client.id);
                     const isOpen = expanded === client.id;
                     const draft = getDraft(client.id);
 
                     return (
-                        <Card key={client.id} className="border-2">
+                        <Card key={client.id} className="border-2 mb-4">
                             <CardHeader
                                 className="cursor-pointer select-none pb-3"
                                 onClick={() => setExpanded(isOpen ? null : client.id)}
@@ -64,13 +55,13 @@ export function StrategiesPanel() {
                                         <BookOpen className="h-4 w-4 text-primary" />
                                         <div>
                                             <CardTitle className="text-base">{client.companyName}</CardTitle>
-                                            <CardDescription>Agent: {client.assignedName} · {client.productSold}</CardDescription>
+                                            <CardDescription>Agent: {client.assignedName || 'Unassigned'} · {client.productSold}</CardDescription>
                                         </div>
                                     </div>
                                     <div className={cls.inline}>
-                                        {strat.updatedAt && <span className={cls.hintXs}>Updated {strat.updatedAt}</span>}
-                                        <Badge variant={strat.overview ? 'default' : 'outline'} className="text-xs">
-                                            {strat.overview ? 'Strategy set' : 'No strategy'}
+                                        {strat.createdAt && <span className={cls.hintXs}>Updated {new Date(strat.createdAt).toLocaleDateString()}</span>}
+                                        <Badge variant={strat.strategyText ? 'default' : 'outline'} className="text-xs">
+                                            {strat.strategyText ? 'Strategy set' : 'No strategy'}
                                         </Badge>
                                     </div>
                                 </div>
@@ -79,44 +70,35 @@ export function StrategiesPanel() {
                             {isOpen && (
                                 <CardContent className={cls.section}>
                                     <div className={cls.field}>
-                                        <Label>Strategy Overview</Label>
+                                        <Label>Strategic Onboarding Plan</Label>
                                         <Textarea
-                                            rows={3}
-                                            placeholder="Describe the overall strategy for this client..."
-                                            value={draft.overview}
-                                            onChange={e => setDraft(client.id, 'overview', e.target.value)}
+                                            rows={6}
+                                            placeholder="Outline the technical strategy, key milestones, and action items for this client..."
+                                            value={draft}
+                                            onChange={e => setDraft(client.id, e.target.value)}
+                                            className="mt-2"
                                         />
-                                        <Button size="sm" className="mt-2" onClick={() => saveOverview(client.id)}>
-                                            Save Overview
-                                        </Button>
-                                    </div>
-
-                                    <div className={cls.section}>
-                                        <Label>Action Steps</Label>
-                                        {strat.steps.length === 0 ? (
-                                            <p className={`${cls.hintXs} py-2`}>No steps added yet.</p>
-                                        ) : (
-                                            <ol className={`${cls.list} list-decimal list-inside`}>
-                                                {strat.steps.map((step, i) => (
-                                                    <li key={i} className="text-sm py-1 border-b last:border-0">{step}</li>
-                                                ))}
-                                            </ol>
-                                        )}
-                                        <div className="flex gap-2 mt-2">
-                                            <Input
-                                                placeholder="Add a step..."
-                                                value={draft.newStep}
-                                                onChange={e => setDraft(client.id, 'newStep', e.target.value)}
-                                                onKeyDown={e => e.key === 'Enter' && addStep(client.id)}
-                                            />
-                                            <Button size="sm" onClick={() => addStep(client.id)}>
-                                                <Plus className="h-4 w-4" />
+                                        <div className="flex gap-2 mt-4">
+                                            <Button size="sm" onClick={() => handleSave(client.id)}>
+                                                <Save className="h-4 w-4 mr-2" />
+                                                Save Strategy
                                             </Button>
+                                            {strat.strategyText && (
+                                                <Button size="icon" variant="destructive" title="Delete Strategy" onClick={() => {
+                                                    if (confirm('Are you sure you want to delete this strategy?')) {
+                                                        deleteStrategy(client.id);
+                                                        setDraft(client.id, '');
+                                                        toast.success('Strategy deleted!');
+                                                    }
+                                                }}>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
 
                                     {(client.clientConcerns || client.tipsForTech) && (
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
                                             {client.clientConcerns && (
                                                 <div className={`${cls.muted} text-sm`}>
                                                     <p className={`${cls.hintXs} mb-1`}>Client Concerns (from Sales)</p>

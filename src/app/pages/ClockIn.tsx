@@ -11,6 +11,7 @@ export function ClockIn() {
   const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
   const [hoursWorked, setHoursWorked] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     if (!user) {
@@ -35,15 +36,23 @@ export function ClockIn() {
     return null;
   }
 
-  const handleClockIn = () => {
-    clockIn();
-    toast.success('Clocked in successfully!');
+  const handleClockIn = async () => {
+    setIsProcessing(true);
+    const success = await clockIn();
+    if (success) {
+      toast.success('Clocked in successfully!');
+    }
+    setIsProcessing(false);
   };
 
-  const handleClockOut = () => {
+  const handleClockOut = async () => {
     if (confirm('Are you sure you want to clock out?')) {
-      clockOut();
-      toast.success('Clocked out successfully!');
+      setIsProcessing(true);
+      const success = await clockOut();
+      if (success) {
+        toast.success('Clocked out successfully!');
+      }
+      setIsProcessing(false);
     }
   };
 
@@ -51,8 +60,8 @@ export function ClockIn() {
     navigate('/dashboard');
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await logout();
     navigate('/login');
   };
 
@@ -152,9 +161,10 @@ export function ClockIn() {
                   onClick={handleClockIn}
                   className="w-full h-14 text-lg"
                   size="lg"
+                  disabled={isProcessing}
                 >
                   <Clock className="h-5 w-5 mr-2" />
-                  Clock In
+                  {isProcessing ? 'Processing...' : 'Clock In'}
                 </Button>
               ) : (
                 <>
@@ -169,9 +179,10 @@ export function ClockIn() {
                     onClick={handleClockOut}
                     variant="outline"
                     className="w-full"
+                    disabled={isProcessing}
                   >
                     <LogOut className="h-4 w-4 mr-2" />
-                    Clock Out
+                    {isProcessing ? 'Processing...' : 'Clock Out'}
                   </Button>
                 </>
               )}

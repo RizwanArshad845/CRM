@@ -8,15 +8,16 @@ import { toast } from 'sonner';
 import { useClientInbox, type InboxClient } from '../../context/ClientInboxContext';
 
 function statusBadge(status: InboxClient['status']) {
-    if (status === 'pending') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-    if (status === 'assigned') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (status === 'onboarding') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    if (status === 'active') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (status === 'flagged') return 'bg-red-100 text-red-700 border-red-200';
     return 'bg-blue-100 text-blue-700 border-blue-200';
 }
 
 export function AssignedPanel() {
     const { inboxClients, unassignClient } = useClientInbox();
     const [search, setSearch] = useState('');
-    const assigned = inboxClients.filter(c => c.status === 'assigned' || c.status === 'reviewed')
+    const assigned = inboxClients.filter(c => c.status === 'active')
         .filter(c => !search || c.companyName.toLowerCase().includes(search.toLowerCase()) || c.customerName.toLowerCase().includes(search.toLowerCase()));
 
     return (

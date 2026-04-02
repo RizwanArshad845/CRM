@@ -10,16 +10,18 @@ import { toast } from 'sonner';
 import { cls } from '../../styles/classes';
 import { useManagerTasks, type TaskPriority } from '../../context/ManagerTaskContext';
 import { useCSTManagerTasks, type CSTTaskPriority } from '../../context/CSTManagerTaskContext';
+import { useEmployees } from '../../context/EmployeeContext';
 
 // ── Shared constants ──────────────────────────────────────────────────────────
 const MGR_CATEGORIES = ['Management', 'Sales', 'Report', 'HR', 'Admin', 'Coaching', 'Strategy', 'Other'];
-const CST_CATEGORIES = ['Management', 'Onboarding', 'Escalation', 'Client', 'Report', 'Admin', 'QA', 'Other'];
+const CST_CATEGORIES = ['Management', 'Onboarding', 'Escalation', 'Client', 'Report', 'Admin',  'Other'];
 
 // ── Admin → Sales Manager task card ──────────────────────────────────────────
 const EMPTY_MGR_TASK = { title: '', priority: 'medium' as TaskPriority, dueDate: '', category: 'Management', notes: '' };
 
 function AssignToSalesManagerPanel() {
   const { addTask } = useManagerTasks();
+  const { employees } = useEmployees();
   const [form, setForm] = useState(EMPTY_MGR_TASK);
 
   const set = <K extends keyof typeof EMPTY_MGR_TASK>(k: K, v: (typeof EMPTY_MGR_TASK)[K]) =>
@@ -30,8 +32,15 @@ function AssignToSalesManagerPanel() {
       toast.error('Please fill in title and due date');
       return;
     }
-    addTask({ ...form, status: 'pending', assignedBy: 'admin' });
-    toast.success('Task assigned to Sales Manager!');
+
+    const salesManager = employees.find(e => e.role === 'sales_manager');
+    if (!salesManager) {
+      toast.error('No Sales Manager found in the system');
+      return;
+    }
+
+    addTask({ ...form, status: 'pending', assignedBy: 'admin' }, salesManager.id);
+    toast.success(`Task assigned to ${salesManager.name}`);
     setForm(EMPTY_MGR_TASK);
   };
 
@@ -102,6 +111,7 @@ const EMPTY_CST_TASK = { title: '', priority: 'medium' as CSTTaskPriority, dueDa
 
 function AssignToCSTManagerPanel() {
   const { addTask } = useCSTManagerTasks();
+  const { employees } = useEmployees();
   const [form, setForm] = useState(EMPTY_CST_TASK);
 
   const set = <K extends keyof typeof EMPTY_CST_TASK>(k: K, v: (typeof EMPTY_CST_TASK)[K]) =>
@@ -112,8 +122,15 @@ function AssignToCSTManagerPanel() {
       toast.error('Please fill in title and due date');
       return;
     }
-    addTask({ ...form, status: 'pending', assignedBy: 'admin' });
-    toast.success('Task assigned to CST Manager!');
+
+    const cstManager = employees.find(e => e.role === 'cst_manager');
+    if (!cstManager) {
+      toast.error('No CST Manager found in the system');
+      return;
+    }
+
+    addTask({ ...form, status: 'pending', assignedBy: 'admin' }, cstManager.id);
+    toast.success(`Task assigned to ${cstManager.name}`);
     setForm(EMPTY_CST_TASK);
   };
 

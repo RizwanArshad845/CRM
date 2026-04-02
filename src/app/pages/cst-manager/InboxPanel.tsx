@@ -10,19 +10,25 @@ import { UserCheck, CheckCircle2, Search } from 'lucide-react';
 import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { useClientInbox, type InboxClient } from '../../context/ClientInboxContext';
-import { CST_AGENTS } from '../../data/mockData';
+import { useEmployees } from '../../context/EmployeeContext';
 
 function statusBadge(status: InboxClient['status']) {
-    if (status === 'pending') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-    if (status === 'assigned') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (status === 'onboarding') return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+    if (status === 'active') return 'bg-emerald-100 text-emerald-700 border-emerald-200';
+    if (status === 'flagged') return 'bg-red-100 text-red-700 border-red-200';
     return 'bg-blue-100 text-blue-700 border-blue-200';
 }
 
 export function InboxPanel() {
     const { inboxClients, assignClient } = useClientInbox();
+    const { employees } = useEmployees();
     const [search, setSearch] = useState('');
-    const pending = inboxClients.filter(c => c.status === 'pending')
+    
+    // Filter for onboarding status (pending review)
+    const pending = inboxClients.filter(c => c.status === 'onboarding')
         .filter(c => !search || c.companyName.toLowerCase().includes(search.toLowerCase()) || c.customerName.toLowerCase().includes(search.toLowerCase()));
+
+    const cstAgents = employees.filter(e => e.role === 'cst' || e.role === 'cst_manager');
 
     const [dialogOpen, setDialogOpen] = useState(false);
     const [selected, setSelected] = useState<InboxClient | null>(null);
@@ -36,7 +42,7 @@ export function InboxPanel() {
 
     const handleAssign = () => {
         if (!agentId || !selected) { toast.error('Please select an agent'); return; }
-        const agent = CST_AGENTS.find(a => a.id === agentId);
+        const agent = cstAgents.find(a => a.id === agentId);
         assignClient(selected.id, agentId, agent?.name ?? '');
         toast.success(`${selected.companyName} assigned to ${agent?.name}!`);
         setDialogOpen(false);
@@ -121,7 +127,6 @@ export function InboxPanel() {
                             <div className={cls.muted}>
                                 <p className={cls.label}>{selected.companyName}</p>
                                 <p className={cls.hintXs}>Product: {selected.productSold} · Payment: ${Number(selected.paymentAmount || 0).toLocaleString()}</p>
-                                {selected.clientConcerns && <p className={`${cls.hintXs} mt-1`}>Concerns: {selected.clientConcerns}</p>}
                             </div>
                         )}
                         <div className={cls.field}>
@@ -129,9 +134,9 @@ export function InboxPanel() {
                             <Select value={agentId !== null ? String(agentId) : ''} onValueChange={v => setAgentId(Number(v))}>
                                 <SelectTrigger><SelectValue placeholder="Choose an agent" /></SelectTrigger>
                                 <SelectContent>
-                                    {CST_AGENTS.map(a => (
+                                    {cstAgents.map(a => (
                                         <SelectItem key={a.id} value={String(a.id)}>
-                                            {a.name} — {a.role} ({a.currentClients} clients)
+                                            {a.name} — {a.role}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

@@ -7,7 +7,15 @@ import { Textarea } from '../../components/ui/textarea';
 import { Badge } from '../../components/ui/badge';
 import { Progress } from '../../components/ui/progress';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { PlusCircle, ClipboardList, BarChart3, CheckCircle2, Clock, XCircle, AlertCircle, Search } from 'lucide-react';
+import { PlusCircle, ClipboardList, BarChart3, CheckCircle2, Clock, XCircle, AlertCircle, Search, Pencil, Trash2 } from 'lucide-react';
+import { 
+    Dialog, 
+    DialogContent, 
+    DialogDescription, 
+    DialogFooter, 
+    DialogHeader, 
+    DialogTitle 
+} from '../../components/ui/dialog';
 import { toast } from 'sonner';
 import { cls } from '../../styles/classes';
 import { useManagerTasks, type TaskPriority, type TaskStatus } from '../../context/ManagerTaskContext';
@@ -43,11 +51,13 @@ function completionColor(pct: number) {
 }
 
 export function ManagerTaskBoard() {
-    const { tasks, addTask, updateTaskStatus } = useManagerTasks();
+    const { tasks, addTask, updateTask, updateTaskStatus, deleteTask } = useManagerTasks();
     const [form, setForm] = useState(EMPTY_FORM);
     const [filterStatus, setFilterStatus] = useState<TaskStatus | 'all'>('all');
     const [filterOrigin, setFilterOrigin] = useState<'all' | 'self' | 'admin'>('all');
     const [taskSearch, setTaskSearch] = useState('');
+    const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+    const [editingTask, setEditingTask] = useState<any>(null);
 
     const set = <K extends keyof typeof EMPTY_FORM>(k: K, v: (typeof EMPTY_FORM)[K]) =>
         setForm(prev => ({ ...prev, [k]: v }));
@@ -60,6 +70,32 @@ export function ManagerTaskBoard() {
         addTask({ ...form, status: 'pending', assignedBy: 'self' });
         toast.success('Task created successfully!');
         setForm(EMPTY_FORM);
+    };
+
+    const handleEditClick = (task: any) => {
+        setEditingTask({
+            id: task.id,
+            title: task.title,
+            priority: task.priority,
+            dueDate: task.dueDate,
+            category: task.category,
+            notes: task.notes,
+            status: task.status
+        });
+        setIsEditDialogOpen(true);
+    };
+
+    const handleUpdateTask = (e: React.FormEvent) => {
+        e.preventDefault();
+        updateTask(editingTask);
+        setIsEditDialogOpen(false);
+        setEditingTask(null);
+    };
+
+    const handleDeleteClick = (id: number) => {
+        if (window.confirm('Are you sure you want to delete this task?')) {
+            deleteTask(id);
+        }
     };
 
     // ── Month evaluation (current month) ──────────────────────────────────────
@@ -237,7 +273,7 @@ export function ManagerTaskBoard() {
                             <table className="w-full text-sm">
                                 <thead className="bg-muted/50">
                                     <tr>
-                                        {['Task', 'Category', 'Priority', 'Due Date', 'Source', 'Status', 'Update'].map(h => (
+                                        {['Task', 'Category', 'Priority', 'Due Date', 'Source', 'Status', 'Update Status', 'Actions'].map(h => (
                                             <th key={h} className={cls.tableHead}>{h}</th>
                                         ))}
                                     </tr>
@@ -274,7 +310,6 @@ export function ManagerTaskBoard() {
                                                     value={task.status}
                                                     onValueChange={v => {
                                                         updateTaskStatus(task.id, v as TaskStatus);
-                                                        toast.success('Status updated');
                                                     }}
                                                 >
                                                     <SelectTrigger className="h-7 w-32 text-xs">
@@ -288,6 +323,32 @@ export function ManagerTaskBoard() {
                                                     </SelectContent>
                                                 </Select>
                                             </td>
+                                            <td className={cls.tableCell}>
+                                                <div className="flex items-center gap-2">
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-7 w-7 text-blue-600 hover:text-blue-700"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleEditClick(task);
+                                                        }}
+                                                    >
+                                                        <Pencil className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                    <Button 
+                                                        variant="ghost" 
+                                                        size="icon" 
+                                                        className="h-7 w-7 text-red-600 hover:text-red-700"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteClick(task.id);
+                                                        }}
+                                                    >
+                                                        <Trash2 className="h-3.5 w-3.5" />
+                                                    </Button>
+                                                </div>
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -296,6 +357,68 @@ export function ManagerTaskBoard() {
                     )}
                 </CardContent>
             </Card>
+            {/* ── Edit Task Dialog ─────────────────────────────────────────── */}
+            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Task</DialogTitle>
+                        <DialogDescription>Modify task details below</DialogDescription>
+                    </DialogHeader>
+                    {editingTask && (
+                        <form onSubmit={handleUpdateTask} className="space-y-4">
+                            <div className={cls.field}>
+                                <Label>Title *</Label>
+                                <Input 
+                                    value={editingTask.title} 
+                                    onChange={e => setEditingTask({...editingTask, title: e.target.value})}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className={cls.field}>
+                                    <Label>Priority</Label>
+                                    <Select value={editingTask.priority} onValueChange={v => setEditingTask({...editingTask, priority: v})}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="high">High</SelectItem>
+                                            <SelectItem value="medium">Medium</SelectItem>
+                                            <SelectItem value="low">Low</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className={cls.field}>
+                                    <Label>Due Date</Label>
+                                    <Input 
+                                        type="date" 
+                                        value={editingTask.dueDate} 
+                                        onChange={e => setEditingTask({...editingTask, dueDate: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+                            <div className={cls.field}>
+                                <Label>Category</Label>
+                                <Select value={editingTask.category} onValueChange={v => setEditingTask({...editingTask, category: v})}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        {CATEGORIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className={cls.field}>
+                                <Label>Notes</Label>
+                                <Textarea 
+                                    value={editingTask.notes} 
+                                    onChange={e => setEditingTask({...editingTask, notes: e.target.value})}
+                                    rows={3}
+                                />
+                            </div>
+                            <DialogFooter>
+                                <Button type="button" variant="outline" onClick={() => setIsEditDialogOpen(false)}>Cancel</Button>
+                                <Button type="submit">Save Changes</Button>
+                            </DialogFooter>
+                        </form>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

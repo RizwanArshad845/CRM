@@ -1,178 +1,197 @@
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
-import { Textarea } from '../../components/ui/textarea';
-import { Button } from '../../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
-import { toast } from 'sonner';
-import { Save, Send, X } from 'lucide-react';
+import { Textarea } from '../../components/ui/textarea';
+import { Checkbox } from '../../components/ui/checkbox';
 import { cls } from '../../styles/classes';
-import { PRODUCTS, SERVICE_AREAS } from '../../data/mockData';
-import { useClientInbox } from '../../context/ClientInboxContext';
+import { toast } from 'sonner';
+import { apiFetch } from '../../utils/api';
 import { useAuth } from '../../context/AuthContext';
+import { PRODUCTS, SERVICE_AREAS } from '../../constants/crm';
 
-type FormData = {
-  companyName: string; customerName: string; paymentAmount: string;
-  productSold: string; email: string; serviceArea: string;
-  contactNo1: string; contactNo2: string;
-  gbpLink: string; websiteLink: string; yelpLink: string;
-  facebook: string; twitter: string; linkedin: string; instagram: string;
-  clientConcerns: string; tipsForTech: string; notes: string;
+const EMPTY_FORM = {
+    companyName: '',
+    customerName: '',
+    paymentAmount: '',
+    productSold: [] as string[],
+    email: '',
+    serviceArea: '',
+    contactNo1: '',
+    contactNo2: '',
+    gbpLink: '',
+    websiteLink: '',
+    yelpLink: '',
+    socialMedia: { facebook: '', twitter: '', linkedin: '', instagram: '' },
+    clientConcerns: '',
+    tipsForTech: '',
+    notes: '',
 };
-
-const EMPTY_FORM: FormData = {
-  companyName: '', customerName: '', paymentAmount: '', productSold: '',
-  email: '', serviceArea: '', contactNo1: '', contactNo2: '', gbpLink: '',
-  websiteLink: '', yelpLink: '', facebook: '', twitter: '',
-  linkedin: '', instagram: '', clientConcerns: '', tipsForTech: '', notes: '',
-};
-
-const TEXT_AREAS: { id: keyof FormData; label: string; placeholder: string }[] = [
-  { id: 'clientConcerns', label: 'Client Concerns', placeholder: 'Any specific concerns or requirements...' },
-  { id: 'tipsForTech', label: 'Tips for Tech Team', placeholder: 'Important technical information...' },
-  { id: 'notes', label: 'General Notes', placeholder: 'Any additional notes...' },
-];
 
 export function ClientEntryForm() {
-  const [formData, setFormData] = useState<FormData>(EMPTY_FORM);
-  const { addInboxClient } = useClientInbox();
-  const { user } = useAuth();
+    const { user } = useAuth();
+    const [form, setForm] = useState(EMPTY_FORM);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const set = (field: keyof FormData, value: string) =>
-    setFormData(prev => ({ ...prev, [field]: value }));
+    const set = (k: string, v: any) => setForm(prev => ({ ...prev, [k]: v }));
+    
+    const handleProductToggle = (product: string) => {
+        const current = [...form.productSold];
+        const idx = current.indexOf(product);
+        if (idx > -1) current.splice(idx, 1);
+        else current.push(product);
+        set('productSold', current);
+    };
 
-  const handleSaveDraft = () => toast.success('Draft saved successfully!');
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!form.companyName || !form.email || !form.paymentAmount) {
+            toast.error('Please fill in all required fields (*)');
+            return;
+        }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.companyName || !formData.customerName || !formData.productSold) {
-      toast.error('Please fill required fields (Company, Customer, Product)');
-      return;
-    }
-    addInboxClient({
-      companyName: formData.companyName,
-      customerName: formData.customerName,
-      paymentAmount: formData.paymentAmount,
-      productSold: formData.productSold,
-      email: formData.email,
-      serviceArea: formData.serviceArea,
-      contactNo1: formData.contactNo1,
-      contactNo2: formData.contactNo2,
-      clientConcerns: formData.clientConcerns,
-      tipsForTech: formData.tipsForTech,
-      notes: formData.notes,
-      submittedBy: user?.name ?? 'Sales Agent',
-    });
-    toast.success('Client submitted to CST Manager inbox!');
-    setFormData(EMPTY_FORM);
-  };
+        setIsSubmitting(true);
+        try {
+            const res = await apiFetch('/clients', {
+                method: 'POST',
+                body: JSON.stringify({
+                    companyName: form.companyName,
+                    customerName: form.customerName,
+                    email: form.email,
+                    paymentAmount: parseFloat(form.paymentAmount),
+                    productSold: form.productSold.join(', '),
+                    serviceArea: form.serviceArea,
+                    contactNo1: form.contactNo1,
+                    contactNo2: form.contactNo2,
+                    clientConcerns: form.clientConcerns,
+                    tipsForTech: form.tipsForTech,
+                    notes: form.notes,
+                    digitalPresence: form.websiteLink || form.gbpLink || form.yelpLink,
+                    sales_agent_id: user?.id
+                })
+            });
 
-  const handleClear = () => {
-    if (confirm('Clear the form?')) {
-      setFormData(EMPTY_FORM);
-      toast.info('Form cleared');
-    }
-  };
+            if (res.success) {
+                toast.success('Client submitted successfully!');
+                setForm(EMPTY_FORM);
+            } else {
+                toast.error(res.error || 'Failed to submit client');
+            }
+        } catch (error) {
+            toast.error('Connection error');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
-  function Field({ id, label, type = 'text', required = false, placeholder = '' }: {
-    id: keyof FormData; label: string; type?: string; required?: boolean; placeholder?: string;
-  }) {
     return (
-      <div className={cls.field}>
-        <Label htmlFor={id}>{label}{required && ' *'}</Label>
-        <Input id={id} type={type} required={required} placeholder={placeholder}
-          value={formData[id]} onChange={e => set(id, e.target.value)} />
-      </div>
+        <form onSubmit={handleSubmit} className={cls.page}>
+            <Card className="max-w-4xl mx-auto shadow-xl border-t-4 border-t-blue-600">
+                <CardHeader>
+                    <CardTitle className="text-2xl font-bold">New Client Entry</CardTitle>
+                    <CardDescription>Enter details for a newly closed deal</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-8">
+                    {/* Basic Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 rounded-xl bg-muted/30 border border-muted-foreground/10">
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold border-b pb-2">Business Details</h3>
+                            <div className={cls.field}>
+                                <Label>Company Name *</Label>
+                                <Input value={form.companyName} onChange={e => set('companyName', e.target.value)} required />
+                            </div>
+                            <div className={cls.field}>
+                                <Label>Customer Name</Label>
+                                <Input value={form.customerName} onChange={e => set('customerName', e.target.value)} />
+                            </div>
+                            <div className={cls.field}>
+                                <Label>Email Address *</Label>
+                                <Input type="email" value={form.email} onChange={e => set('email', e.target.value)} required />
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <h3 className="text-lg font-semibold border-b pb-2">Deal Details</h3>
+                            <div className={cls.field}>
+                                <Label>Payment Amount (₨) *</Label>
+                                <Input type="number" value={form.paymentAmount} onChange={e => set('paymentAmount', e.target.value)} required />
+                            </div>
+                            <div className={cls.field}>
+                                <Label>Service Area</Label>
+                                <Select value={form.serviceArea} onValueChange={v => set('serviceArea', v)}>
+                                    <SelectTrigger><SelectValue placeholder="Select Area" /></SelectTrigger>
+                                    <SelectContent>
+                                        {SERVICE_AREAS.map((a: string) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className={cls.field}>
+                                <Label>Contact No.</Label>
+                                <Input value={form.contactNo1} onChange={e => set('contactNo1', e.target.value)} placeholder="+1 234-567-8900" />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Product Selection */}
+                    <div className="space-y-4 p-6 rounded-xl border border-muted-foreground/10">
+                        <h3 className="text-lg font-semibold border-b pb-2">Products Sold *</h3>
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {PRODUCTS.map((p: string) => (
+                                <div key={p} className="flex items-center space-x-2 p-2 hover:bg-muted/50 rounded-lg transition-colors">
+                                    <Checkbox 
+                                        id={`product-${p}`}
+                                        checked={form.productSold.includes(p)} 
+                                        onCheckedChange={() => handleProductToggle(p)}
+                                    />
+                                    <Label 
+                                        htmlFor={`product-${p}`}
+                                        className="text-sm font-medium leading-none cursor-pointer"
+                                    >
+                                        {p}
+                                    </Label>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Online Presence */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 rounded-xl bg-blue-50/10 border border-blue-500/10">
+                        <div className={cls.field}>
+                            <Label>GBP Link</Label>
+                            <Input value={form.gbpLink} onChange={e => set('gbpLink', e.target.value)} placeholder="https://..." />
+                        </div>
+                        <div className={cls.field}>
+                            <Label>Website Link</Label>
+                            <Input value={form.websiteLink} onChange={e => set('websiteLink', e.target.value)} placeholder="https://..." />
+                        </div>
+                        <div className={cls.field}>
+                            <Label>Yelp Link</Label>
+                            <Input value={form.yelpLink} onChange={e => set('yelpLink', e.target.value)} placeholder="https://..." />
+                        </div>
+                    </div>
+
+                    {/* Tech Notes */}
+                    <div className="space-y-4 p-6 rounded-xl bg-orange-50/10 border border-orange-500/10">
+                        <h3 className="text-lg font-semibold text-orange-700 dark:text-orange-400">Technical Instructions</h3>
+                        <div className={cls.field}>
+                            <Label>Client Concerns</Label>
+                            <Textarea value={form.clientConcerns} onChange={e => set('clientConcerns', e.target.value)} placeholder="What is the client worried about?" />
+                        </div>
+                        <div className={cls.field}>
+                            <Label>Tips for the Tech Team</Label>
+                            <Textarea value={form.tipsForTech} onChange={e => set('tipsForTech', e.target.value)} placeholder="Special instructions for execution..." />
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end pt-4">
+                        <Button type="submit" size="lg" className="w-[200px] h-12 shadow-lg hover:scale-105 transition-transform" disabled={isSubmitting}>
+                            {isSubmitting ? 'Submitting...' : 'Submit Client'}
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </form>
     );
-  }
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Sales Information Entry for CST Team</CardTitle>
-          <CardDescription>Enter client information and sales details</CardDescription>
-        </CardHeader>
-        <CardContent className={cls.page}>
-          {/* Client Information */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2">Client Information</h3>
-            <div className={`grid grid-cols-1 md:grid-cols-2 gap-4`}>
-              <Field id="companyName" label="Company Name" required placeholder="ABC Corporation" />
-              <Field id="customerName" label="Customer Name" required placeholder="John Doe" />
-              <Field id="paymentAmount" label="Payment Amount ($)" type="number" required placeholder="5000" />
-              <Field id="email" label="Email" type="email" required placeholder="contact@company.com" />
-              <div className={cls.field}>
-                <Label htmlFor="serviceArea">Service Area *</Label>
-                <Select value={formData.serviceArea} onValueChange={v => set('serviceArea', v)}>
-                  <SelectTrigger id="serviceArea"><SelectValue placeholder="Select service area" /></SelectTrigger>
-                  <SelectContent>
-                    {SERVICE_AREAS.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className={cls.field}>
-                <Label htmlFor="productSold">Product / Category *</Label>
-                <Select value={formData.productSold} onValueChange={v => set('productSold', v)}>
-                  <SelectTrigger id="productSold"><SelectValue placeholder="Select product" /></SelectTrigger>
-                  <SelectContent>
-                    {PRODUCTS.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          </section>
-
-          {/* Contact Details */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2">Contact Details</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field id="contactNo1" label="Contact No. 1 (Primary)" type="tel" required placeholder="+1 (555) 123-4567" />
-              <Field id="contactNo2" label="Contact No. 2 (Secondary)" type="tel" placeholder="+1 (555) 987-6543" />
-            </div>
-          </section>
-
-          {/* Digital Presence */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2">Digital Presence</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Field id="websiteLink" label="Website" type="url" placeholder="https://www.company.com" />
-              <Field id="gbpLink" label="Google Business Profile" type="url" placeholder="https://g.page/..." />
-              <Field id="yelpLink" label="Yelp" type="url" placeholder="https://www.yelp.com/..." />
-              <Field id="facebook" label="Facebook" type="url" placeholder="https://facebook.com/..." />
-              <Field id="twitter" label="Twitter/X" type="url" placeholder="https://twitter.com/..." />
-              <Field id="linkedin" label="LinkedIn" type="url" placeholder="https://linkedin.com/..." />
-              <Field id="instagram" label="Instagram" type="url" placeholder="https://instagram.com/..." />
-            </div>
-          </section>
-
-          {/* Additional Information */}
-          <section className={cls.section}>
-            <h3 className="font-semibold text-lg border-b pb-2">Additional Information</h3>
-            {TEXT_AREAS.map(({ id, label, placeholder }) => (
-              <div key={id} className={cls.field}>
-                <Label htmlFor={id}>{label}</Label>
-                <Textarea id={id} rows={3} placeholder={placeholder}
-                  value={formData[id]} onChange={e => set(id, e.target.value)} />
-              </div>
-            ))}
-          </section>
-
-          {/* Actions */}
-          <div className={`${cls.actions} pt-4`}>
-            <Button type="button" variant="outline" onClick={handleSaveDraft} className="flex-1">
-              <Save className="h-4 w-4 mr-2" />Save Draft
-            </Button>
-            <Button type="submit" className="flex-1">
-              <Send className="h-4 w-4 mr-2" />Submit for Review
-            </Button>
-            <Button type="button" variant="destructive" onClick={handleClear}>
-              <X className="h-4 w-4 mr-2" />Clear
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </form>
-  );
 }

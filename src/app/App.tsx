@@ -8,6 +8,11 @@ import { CSTManagerTaskProvider } from './context/CSTManagerTaskContext';
 import { ClientInboxProvider } from './context/ClientInboxContext';
 import { ClientProvider } from './context/ClientContext';
 import { AgentTargetProvider } from './context/AgentTargetContext';
+import { FinanceProvider } from './context/FinanceContext';
+import { RecordingProvider } from './context/RecordingContext';
+import { CSTScheduleProvider } from './context/CSTScheduleContext';
+import { AttendanceProvider } from './context/AttendanceContext';
+import { PerformanceProvider } from './context/PerformanceContext';
 
 export default function App() {
   return (
@@ -16,12 +21,22 @@ export default function App() {
         <ManagerTaskProvider>
           <CSTManagerTaskProvider>
             <AgentTargetProvider>
-              <ClientProvider>
-              <ClientInboxProvider>
-                <RouterProvider router={router} />
-                <Toaster />
-              </ClientInboxProvider>
-            </ClientProvider>
+              <FinanceProvider>
+                <RecordingProvider>
+                  <CSTScheduleProvider>
+                    <PerformanceProvider>
+                      <AttendanceProvider>
+                        <ClientProvider>
+                          <ClientInboxProvider>
+                            <RouterProvider router={router} />
+                            <Toaster />
+                          </ClientInboxProvider>
+                        </ClientProvider>
+                      </AttendanceProvider>
+                    </PerformanceProvider>
+                  </CSTScheduleProvider>
+                </RecordingProvider>
+              </FinanceProvider>
             </AgentTargetProvider>
           </CSTManagerTaskProvider>
         </ManagerTaskProvider>

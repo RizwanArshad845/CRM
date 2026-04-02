@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs';
 import { Badge } from '../../components/ui/badge';
@@ -8,49 +8,41 @@ import { Input } from '../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Download, Search, TrendingUp } from 'lucide-react';
 import { cls } from '../../styles/classes';
-import {
-  SALES_TEAM_PERFORMANCE, CST_TEAM_PERFORMANCE,
-  FINANCE_TEAM_PERFORMANCE, QA_TEAM_PERFORMANCE,
-  ATTENDANCE_LOG, EMPLOYEE_TASK_DETAILS,
-  SALES_MANAGER_PERFORMANCE,
-  type EmployeeTaskItem, type TaskItemStatus, type TaskPriority,
-} from '../../data/mockData';
-import type { AttendanceEntry } from '../../data/mockData';
+import { useAttendance } from '../../context/AttendanceContext';
+import { usePerformance } from '../../context/PerformanceContext';
+import { TASK_STATUSES, TASK_PRIORITIES } from '../../constants/crm';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function scoreColor(s: number) {
   return s >= 90 ? 'text-green-600' : s >= 75 ? 'text-yellow-600' : 'text-red-600';
 }
 
-const TASK_STATUS_STYLE: Record<TaskItemStatus, string> = {
+const TASK_STATUS_STYLE: Record<string, string> = {
   completed: 'bg-green-100 text-green-800',
   'in-progress': 'bg-blue-100 text-blue-800',
   missed: 'bg-red-100 text-red-800',
   pending: 'bg-yellow-100 text-yellow-800',
+  approved: 'bg-emerald-100 text-emerald-800',
+  rejected: 'bg-rose-100 text-rose-800',
+  submitted: 'bg-indigo-100 text-indigo-800'
 };
 
-const PRIORITY_STYLE: Record<TaskPriority, string> = {
+const PRIORITY_STYLE: Record<string, string> = {
   high: 'bg-red-50 text-red-700 border-red-200',
   medium: 'bg-orange-50 text-orange-700 border-orange-200',
   low: 'bg-gray-50 text-gray-600 border-gray-200',
 };
 
-const EMP_ID: Record<string, string> = {
-  'John Smith': 'EMP001', 'Sarah Johnson': 'EMP002',
-  'Mike Chen': 'EMP003', 'Emily Davis': 'EMP004',
-  'Robert Wilson': 'EMP005', 'Sarah Martinez': 'EMP006',
-};
-
-function statusBadge(status: AttendanceEntry['status']) {
+function statusBadge(status: 'on-time' | 'tardy' | 'absent') {
   if (status === 'on-time') return <Badge className="bg-green-100 text-green-800 border-0">On Time</Badge>;
   if (status === 'tardy') return <Badge className="bg-yellow-100 text-yellow-800 border-0">Tardy</Badge>;
   return <Badge className="bg-red-100 text-red-800 border-0">Absent</Badge>;
 }
 
-function exportCSV(name: string, records: AttendanceEntry[]) {
+function exportCSV(name: string, records: any[]) {
   const header = 'Employee,Department,Date,Clock In,Clock Out,Hours Worked,Status\n';
   const rows = records.map(r =>
-    `${r.employeeName},${r.department},${r.date},${r.clockIn ?? '—'},${r.clockOut ?? '—'},${r.hoursWorked ?? '—'},${r.status}`
+    `${r.user_name},${r.department},${r.date},${r.clock_in_time ?? '—'},${r.clock_out_time ?? '—'},${r.total_hours ?? '—'},${r.status}`
   ).join('\n');
   const blob = new Blob([header + rows], { type: 'text/csv' });
   const a = document.createElement('a');
@@ -82,14 +74,15 @@ function MemberHeader({ name, role, score }: { name: string; role: string; score
   );
 }
 
-function AttendanceTable({ employeeId, employeeName }: { employeeId: string; employeeName: string }) {
+function AttendanceTable({ userId, employeeName }: { userId: number; employeeName: string }) {
   const [showFull, setShowFull] = useState(false);
-  const records = ATTENDANCE_LOG.filter(r => r.employeeId === employeeId);
-  const onTime = records.filter(r => r.status === 'on-time').length;
-  const tardy = records.filter(r => r.status === 'tardy').length;
-  const absent = records.filter(r => r.status === 'absent').length;
-  const avgHrs = records.length
-    ? (records.reduce((s, r) => s + (r.hoursWorked ?? 0), 0) / records.length).toFixed(1)
+  const { records, fetchRecords } = useAttendance();
+  const empRecords = records.filter(r => r.user_id === userId);
+  const onTime = empRecords.filter(r => r.status === 'on-time').length;
+  const tardy = empRecords.filter(r => r.status === 'tardy').length;
+  const absent = empRecords.filter(r => r.status === 'absent').length;
+  const avgHrs = empRecords.length
+    ? (empRecords.reduce((s, r) => s + (r.total_hours ?? 0), 0) / empRecords.length).toFixed(1)
     : '—';
 
   return (
@@ -100,7 +93,13 @@ function AttendanceTable({ employeeId, employeeName }: { employeeId: string; emp
           <Button variant="outline" size="sm" onClick={() => exportCSV(employeeName, records)}>
             <Download className="h-3.5 w-3.5 mr-1" />CSV
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowFull(v => !v)}>
+          <Button variant="outline" size="sm" onClick={() => {
+            if (!showFull) {
+                // Fetch fresh records before showing
+                fetchRecords();
+            }
+            setShowFull(v => !v);
+          }}>
             {showFull ? 'Hide Log' : 'View Full Log'}
           </Button>
         </div>
@@ -131,16 +130,16 @@ function AttendanceTable({ employeeId, employeeName }: { employeeId: string; emp
               ))}</tr>
             </thead>
             <tbody className="divide-y">
-              {records.map(r => (
+              {empRecords.map(r => (
                 <tr key={r.id} className="hover:bg-muted/30 transition-colors">
                   <td className="px-3 py-2 font-mono text-xs">{r.date}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{r.clockIn ?? <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{r.clockOut ?? <span className="text-muted-foreground">—</span>}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{r.hoursWorked != null ? `${r.hoursWorked}h` : <span className="text-muted-foreground">—</span>}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{r.clock_in_time ?? <span className="text-muted-foreground">—</span>}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{r.clock_out_time ?? <span className="text-muted-foreground">—</span>}</td>
+                  <td className="px-3 py-2 font-mono text-xs">{r.total_hours != null ? `${r.total_hours}h` : <span className="text-muted-foreground">—</span>}</td>
                   <td className="px-3 py-2">{statusBadge(r.status)}</td>
                 </tr>
               ))}
-              {records.length === 0 && <tr><td colSpan={5} className="text-center py-4 text-muted-foreground text-sm">No attendance records</td></tr>}
+              {empRecords.length === 0 && <tr><td colSpan={5} className="text-center py-4 text-muted-foreground text-sm">No attendance records</td></tr>}
             </tbody>
           </table>
         </div>
@@ -153,8 +152,9 @@ function AttendanceTable({ employeeId, employeeName }: { employeeId: string; emp
 function TaskDetailTable({ employeeName, search, filterStatus, filterPriority }: {
   employeeName: string; search: string; filterStatus: string; filterPriority: string;
 }) {
-  const tasks = EMPLOYEE_TASK_DETAILS.filter(t => {
-    const matchName = t.employeeName === employeeName;
+  const { taskDetails } = usePerformance();
+  const tasks = taskDetails.filter(t => {
+    const matchName = t.employee_name === employeeName;
     const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase()) || t.category.toLowerCase().includes(search.toLowerCase());
     const matchStatus = filterStatus === 'all' || t.status === filterStatus;
     const matchPriority = filterPriority === 'all' || t.priority === filterPriority;
@@ -178,7 +178,7 @@ function TaskDetailTable({ employeeName, search, filterStatus, filterPriority }:
                 <td className={cls.tableCell}><Badge variant="outline" className="text-xs">{t.category}</Badge></td>
                 <td className={cls.tableCell}><Badge className={`${PRIORITY_STYLE[t.priority]} border text-xs`}>{t.priority}</Badge></td>
                 <td className={cls.tableCell}><Badge className={`${TASK_STATUS_STYLE[t.status]} border-0 text-xs`}>{t.status}</Badge></td>
-                <td className={`${cls.tableCell} font-mono text-xs`}>{t.dueDate}</td>
+                <td className={`${cls.tableCell} font-mono text-xs`}>{t.due_date}</td>
               </tr>
             ))}
             {tasks.length === 0 && (
@@ -207,19 +207,14 @@ function FilterBar({ search, setSearch, filterStatus, setFilterStatus, filterPri
         <SelectTrigger className="w-[145px] h-8 text-sm"><SelectValue placeholder="Status" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Status</SelectItem>
-          <SelectItem value="completed">Completed</SelectItem>
-          <SelectItem value="in-progress">In Progress</SelectItem>
-          <SelectItem value="pending">Pending</SelectItem>
-          <SelectItem value="missed">Missed</SelectItem>
+          {TASK_STATUSES.map((s: string) => <SelectItem key={s} value={s}>{s.replace('-', ' ').toUpperCase()}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={filterPriority} onValueChange={setFilterPriority}>
         <SelectTrigger className="w-[140px] h-8 text-sm"><SelectValue placeholder="Priority" /></SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All Priority</SelectItem>
-          <SelectItem value="high">High</SelectItem>
-          <SelectItem value="medium">Medium</SelectItem>
-          <SelectItem value="low">Low</SelectItem>
+          {TASK_PRIORITIES.map((p: string) => <SelectItem key={p} value={p}>{p.toUpperCase()}</SelectItem>)}
         </SelectContent>
       </Select>
     </div>
@@ -233,10 +228,17 @@ export function PerformanceReviews() {
   const [filterPriority, setFilterPriority] = useState('all');
   const [agentSearch, setAgentSearch] = useState('');
 
+  const { stats, isLoading } = usePerformance();
+
   const filterProps = { search, setSearch, filterStatus, setFilterStatus, filterPriority, setFilterPriority };
 
   const filterTeam = <T extends { name: string }>(team: T[]) =>
     team.filter(m => !agentSearch || m.name.toLowerCase().includes(agentSearch.toLowerCase()));
+
+  if (isLoading) return <div className="p-8 text-center">Loading performance data...</div>;
+
+  const salesManagers = stats.sales.filter(s => s.role === 'sales_manager');
+  const salesAgents = stats.sales.filter(s => s.role === 'sales');
 
   return (
     <Card>
@@ -254,64 +256,65 @@ export function PerformanceReviews() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="sales" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="sales">Sales</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="sales">Sales Agents</TabsTrigger>
             <TabsTrigger value="sales_manager">
-              <TrendingUp className="h-3.5 w-3.5 mr-1.5" />Sales Manager
+              <TrendingUp className="h-3.5 w-3.5 mr-1.5" />Sales Managers
             </TabsTrigger>
-            <TabsTrigger value="cst">CST</TabsTrigger>
-            <TabsTrigger value="finance">Finance</TabsTrigger>
-            <TabsTrigger value="qa">QA</TabsTrigger>
+            <TabsTrigger value="cst">CST Team</TabsTrigger>
+            <TabsTrigger value="finance">Finance Team</TabsTrigger>
           </TabsList>
 
           {/* Sales Agents */}
           <TabsContent value="sales" className={`${cls.section} mt-6`}>
             <FilterBar {...filterProps} />
-            {filterTeam(SALES_TEAM_PERFORMANCE).map(m => (
+            {filterTeam(salesAgents).map(m => (
               <Card key={m.id} className="border-2">
-                <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overallScore} /></CardHeader>
+                <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overall_score} /></CardHeader>
                 <CardContent className={cls.section}>
                   <div className={cls.gridResponsive4}>
-                    <StatTile label="Revenue" value={`$${m.monthlyRevenue.toLocaleString()}`} />
-                    <StatTile label="Calls Made" value={m.callsMade} />
-                    <StatTile label="Conversion" value={`${m.conversionRate}%`} />
-                    <StatTile label="Target" value={`$${m.targetRevenue.toLocaleString()}`} />
+                    <StatTile label="Revenue" value={`₨ ${m.monthly_revenue.toLocaleString()}`} />
+                    <StatTile label="Calls Made" value={m.calls_made} />
+                    <StatTile label="Deals Closed" value={m.deals_closed} />
+                    <StatTile label="Target" value={`₨ ${m.target_revenue.toLocaleString()}`} />
                   </div>
                   <div>
                     <div className={`${cls.row} text-sm mb-2`}>
                       <span className={cls.label}>Revenue Progress</span>
-                      <span className={cls.hint}>{Math.round((m.monthlyRevenue / m.targetRevenue) * 100)}%</span>
+                      <span className={cls.hint}>{Math.round((m.monthly_revenue / m.target_revenue) * 100)}%</span>
                     </div>
-                    <Progress value={(m.monthlyRevenue / m.targetRevenue) * 100} />
+                    <Progress value={(m.monthly_revenue / m.target_revenue) * 100} />
                   </div>
                   <TaskDetailTable employeeName={m.name} search={search} filterStatus={filterStatus} filterPriority={filterPriority} />
-                  <AttendanceTable employeeId={EMP_ID[m.name] ?? ''} employeeName={m.name} />
+                  <AttendanceTable userId={m.id} employeeName={m.name} />
                 </CardContent>
               </Card>
             ))}
+            {filterTeam(salesAgents).length === 0 && <p className="text-center py-8 text-muted-foreground">No agents found</p>}
           </TabsContent>
 
           {/* Sales Manager */}
           <TabsContent value="sales_manager" className={`${cls.section} mt-6`}>
             <FilterBar {...filterProps} />
-            {filterTeam(SALES_MANAGER_PERFORMANCE).map(m => (
+            {filterTeam(salesManagers).map(m => (
               <Card key={m.id} className="border-2 border-blue-200">
-                <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overallScore} /></CardHeader>
+                <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overall_score} /></CardHeader>
                 <CardContent className={cls.section}>
                   <div className={cls.gridResponsive4}>
-                    <StatTile label="Total Revenue" value={`$${m.totalRevenue.toLocaleString()}`} />
-                    <StatTile label="Target Revenue" value={`$${m.targetRevenue.toLocaleString()}`} />
-                    <StatTile label="Monthly Deals" value={m.monthlyDeals} />
-                    <StatTile label="Agent Avg Score" value={`${m.agentPerformanceAvg}%`} />
+                    <StatTile label="Total Revenue" value={`₨ ${m.monthly_revenue.toLocaleString()}`} />
+                    <StatTile label="Tasks Done" value={m.tasks_completed} />
+                    <StatTile label="Tasks Missed" value={m.tasks_missed} />
+                    <StatTile label="Avg Score" value={m.overall_score} />
                   </div>
                   <div>
                     <div className={`${cls.row} text-sm mb-2`}>
                       <span className={cls.label}>Revenue Progress</span>
-                      <span className={cls.hint}>{Math.round((m.totalRevenue / m.targetRevenue) * 100)}%</span>
+                      <span className={cls.hint}>{Math.round((m.monthly_revenue / m.target_revenue) * 100)}%</span>
                     </div>
-                    <Progress value={(m.totalRevenue / m.targetRevenue) * 100} />
+                    <Progress value={(m.monthly_revenue / m.target_revenue) * 100} />
                   </div>
                   <TaskDetailTable employeeName={m.name} search={search} filterStatus={filterStatus} filterPriority={filterPriority} />
+                  <AttendanceTable userId={m.id} employeeName={m.name} />
                 </CardContent>
               </Card>
             ))}
@@ -320,18 +323,18 @@ export function PerformanceReviews() {
           {/* CST */}
           <TabsContent value="cst" className={`${cls.section} mt-6`}>
             <FilterBar {...filterProps} />
-            {filterTeam(CST_TEAM_PERFORMANCE).map(m => (
+            {filterTeam(stats.cst).map(m => (
               <Card key={m.id} className="border-2">
-                <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overallScore} /></CardHeader>
+                <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overall_score} /></CardHeader>
                 <CardContent className={cls.section}>
                   <div className={cls.gridResponsive4}>
-                    <StatTile label="Clients" value={m.clientsManaged} />
-                    <StatTile label="Satisfaction" value={`${m.satisfactionScore}/5`} />
-                    <StatTile label="Response Time" value={m.responseTime} />
-                    <StatTile label="Tasks Done" value={m.tasksCompleted} />
+                    <StatTile label="Clients" value={m.clients_managed} />
+                    <StatTile label="Tasks Done" value={m.tasks_completed} />
+                    <StatTile label="Tasks Missed" value={m.tasks_missed} />
+                    <StatTile label="Avg Score" value={m.overall_score} />
                   </div>
                   <TaskDetailTable employeeName={m.name} search={search} filterStatus={filterStatus} filterPriority={filterPriority} />
-                  <AttendanceTable employeeId={EMP_ID[m.name] ?? ''} employeeName={m.name} />
+                  <AttendanceTable userId={m.id} employeeName={m.name} />
                 </CardContent>
               </Card>
             ))}
@@ -340,38 +343,18 @@ export function PerformanceReviews() {
           {/* Finance */}
           <TabsContent value="finance" className={`${cls.section} mt-6`}>
             <FilterBar {...filterProps} />
-            {filterTeam(FINANCE_TEAM_PERFORMANCE).map(m => (
+            {filterTeam(stats.finance).map(m => (
               <Card key={m.id} className="border-2">
-                <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overallScore} /></CardHeader>
+                <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overall_score} /></CardHeader>
                 <CardContent className={cls.section}>
                   <div className={cls.gridResponsive4}>
-                    <StatTile label="Payments" value={m.paymentsProcessed} />
-                    <StatTile label="Accuracy" value={`${m.accuracyRate}%`} />
-                    <StatTile label="Reports" value={m.reportsGenerated} />
-                    <StatTile label="Tasks Done" value={m.tasksCompleted} />
+                    <StatTile label="Payments" value={m.payments_processed} />
+                    <StatTile label="Tasks Done" value={m.tasks_completed} />
+                    <StatTile label="Tasks Missed" value={m.tasks_missed} />
+                    <StatTile label="Avg Score" value={m.overall_score} />
                   </div>
                   <TaskDetailTable employeeName={m.name} search={search} filterStatus={filterStatus} filterPriority={filterPriority} />
-                  <AttendanceTable employeeId={EMP_ID[m.name] ?? ''} employeeName={m.name} />
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-
-          {/* QA */}
-          <TabsContent value="qa" className={`${cls.section} mt-6`}>
-            <FilterBar {...filterProps} />
-            {filterTeam(QA_TEAM_PERFORMANCE).map(m => (
-              <Card key={m.id} className="border-2">
-                <CardHeader><MemberHeader name={m.name} role={m.role} score={m.overallScore} /></CardHeader>
-                <CardContent className={cls.section}>
-                  <div className={cls.gridResponsive4}>
-                    <StatTile label="Evaluations" value={m.evaluationsCompleted} />
-                    <StatTile label="Issues Found" value={m.issuesIdentified} />
-                    <StatTile label="Resolution" value={`${m.resolutionRate}%`} />
-                    <StatTile label="Tasks Done" value={m.tasksCompleted} />
-                  </div>
-                  <TaskDetailTable employeeName={m.name} search={search} filterStatus={filterStatus} filterPriority={filterPriority} />
-                  <AttendanceTable employeeId={EMP_ID[m.name] ?? ''} employeeName={m.name} />
+                  <AttendanceTable userId={m.id} employeeName={m.name} />
                 </CardContent>
               </Card>
             ))}

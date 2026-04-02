@@ -41,7 +41,7 @@ export function ActiveClientsPanel() {
                                         size="sm"
                                         variant="destructive"
                                         onClick={() => {
-                                            resolveDeactivationRequest(req.clientId, true);
+                                            resolveDeactivationRequest(req.id, true, req.clientId);
                                             toast.success(`${req.clientName} has been deactivated.`);
                                         }}
                                     >
@@ -51,7 +51,7 @@ export function ActiveClientsPanel() {
                                         size="sm"
                                         variant="outline"
                                         onClick={() => {
-                                            resolveDeactivationRequest(req.clientId, false);
+                                            resolveDeactivationRequest(req.id, false, req.clientId);
                                             toast.info(`Request for ${req.clientName} dismissed.`);
                                         }}
                                     >
@@ -106,15 +106,20 @@ export function ActiveClientsPanel() {
                                             <Button
                                                 size="sm"
                                                 variant={c.isActive ? 'destructive' : 'default'}
+                                                disabled={c.status === 'onboarding' || c.assignedAgent === 'Unassigned'}
                                                 onClick={() => {
                                                     toggleActive(c.id);
                                                     toast.success(`${c.name} ${c.isActive ? 'deactivated' : 'activated'}.`);
                                                 }}
+                                                title={c.assignedAgent === 'Unassigned' ? "Assign client from Inbox first" : ""}
                                             >
                                                 {c.isActive
                                                     ? <><PowerOff className="h-3.5 w-3.5 mr-1.5" />Deactivate</>
                                                     : <><Power className="h-3.5 w-3.5 mr-1.5" />Activate</>}
                                             </Button>
+                                            {(c.status === 'onboarding' || c.assignedAgent === 'Unassigned') && (
+                                                <p className="text-[10px] text-muted-foreground mt-1">Assign first</p>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

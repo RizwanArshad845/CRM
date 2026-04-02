@@ -1,7 +1,10 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
+import { apiFetch } from '../utils/api';
+import { toast } from 'sonner';
+import { useClients } from './ClientContext';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-export type InboxStatus = 'pending' | 'assigned' | 'reviewed';
+export type InboxStatus = 'onboarding' | 'active' | 'flagged' | 'deactivated';
 
 export interface InboxClient {
     id: number;
@@ -25,9 +28,8 @@ export interface InboxClient {
 
 export interface ClientStrategy {
     clientId: number;
-    overview: string;
-    steps: string[];
-    updatedAt: string;
+    strategyText: string;
+    createdAt: string;
 }
 
 export interface CSTAgentTarget {
@@ -39,64 +41,46 @@ export interface CSTAgentTarget {
     achievedClients: number;
 }
 
-// ── Seed data ──────────────────────────────────────────────────────────────────
-const SEED_CLIENTS: InboxClient[] = [
-    {
-        id: 101, companyName: 'Bright Media Inc', customerName: 'James Turner',
-        paymentAmount: '6500', productSold: 'SEO Services', email: 'james@brightmedia.com',
-        serviceArea: 'North America', contactNo1: '+1 555-1001', contactNo2: '',
-        clientConcerns: 'Wants monthly ranking reports', tipsForTech: 'Focus on local SEO',
-        notes: 'Very engaged client', submittedBy: 'John Smith',
-        submittedDate: '2026-03-20', status: 'pending',
-    },
-    {
-        id: 102, companyName: 'Nova Digital Ltd', customerName: 'Priya Sharma',
-        paymentAmount: '9200', productSold: 'Web Development', email: 'priya@novadigital.com',
-        serviceArea: 'Europe', contactNo1: '+44 20-4567', contactNo2: '+44 20-7890',
-        clientConcerns: 'Needs full redesign', tipsForTech: 'Has existing WordPress site',
-        notes: 'High priority', submittedBy: 'Sarah Johnson',
-        submittedDate: '2026-03-21', status: 'pending',
-    },
-    {
-        id: 103, companyName: 'PeakAds Agency', customerName: 'Carlos Mendez',
-        paymentAmount: '4800', productSold: 'Google Ads', email: 'carlos@peakads.com',
-        serviceArea: 'Latin America', contactNo1: '+52 55-3412', contactNo2: '',
-        clientConcerns: 'Low conversion rate', tipsForTech: 'Budget is $500/month ad spend',
-        notes: '', submittedBy: 'John Smith',
-        submittedDate: '2026-03-22', status: 'assigned',
-        assignedTo: 2, assignedName: 'Mike Chen',
-    },
-];
-
-const SEED_STRATEGIES: ClientStrategy[] = [
-    {
-        clientId: 103,
-        overview: 'Focus on Google Shopping campaigns and remarketing.',
-        steps: ['Set up conversion tracking', 'Launch Shopping campaign', 'Review after 2 weeks'],
-        updatedAt: '2026-03-22',
-    },
-];
-
-const SEED_TARGETS: CSTAgentTarget[] = [
-    { id: 1, agentId: 1, agentName: 'Emily Davis', month: 'March 2026', targetClients: 12, achievedClients: 9 },
-    { id: 2, agentId: 2, agentName: 'Mike Chen', month: 'March 2026', targetClients: 10, achievedClients: 7 },
-    { id: 3, agentId: 3, agentName: 'Lisa Johnson', month: 'March 2026', targetClients: 8, achievedClients: 8 },
-];
-
-const SEED_IDS = new Set([101, 102, 103]);
-const LS_KEY = 'crm_client_inbox';
-
-function loadFromStorage(): InboxClient[] {
-    try {
-        const raw = localStorage.getItem(LS_KEY);
-        return raw ? (JSON.parse(raw) as InboxClient[]) : [];
-    } catch { return []; }
+// ── Mapping Helpers ───────────────────────────────────────────────────────────
+function mapBackendToClient(b: any): InboxClient {
+    return {
+        id: b.id,
+        companyName: b.company_name,
+        customerName: b.customer_name,
+        paymentAmount: b.payment_amount?.toString() || '0',
+        productSold: b.product_sold,
+        email: b.email,
+        serviceArea: b.service_area,
+        contactNo1: b.contact_no1,
+        contactNo2: b.contact_no2,
+        clientConcerns: b.client_concerns,
+        tipsForTech: b.tips_for_tech,
+        notes: b.notes,
+        submittedBy: b.submitted_by_name || 'System',
+        submittedDate: b.created_at?.split('T')[0] || '',
+        status: b.status as InboxStatus,
+        assignedTo: b.cst_agent_id,
+        assignedName: b.assigned_name
+    };
 }
 
-function saveToStorage(clients: InboxClient[]) {
-    // Only persist clients submitted by sales (not the seeds)
-    const salesSubmitted = clients.filter(c => !SEED_IDS.has(c.id));
-    localStorage.setItem(LS_KEY, JSON.stringify(salesSubmitted));
+function mapBackendToStrategy(b: any): ClientStrategy {
+    return {
+        clientId: b.client_id,
+        strategyText: b.strategy_text || '',
+        createdAt: b.created_at || b.updated_at
+    };
+}
+
+function mapBackendToTarget(b: any): CSTAgentTarget {
+    return {
+        id: b.id,
+        agentId: b.agent_id,
+        agentName: b.agent_name,
+        month: b.target_month,
+        targetClients: b.target_clients,
+        achievedClients: b.achievedClients || 0
+    };
 }
 
 // ── Context ────────────────────────────────────────────────────────────────────
@@ -104,78 +88,145 @@ interface ClientInboxContextType {
     inboxClients: InboxClient[];
     strategies: ClientStrategy[];
     targets: CSTAgentTarget[];
-    addInboxClient: (client: Omit<InboxClient, 'id' | 'submittedDate' | 'status'>) => void;
     assignClient: (clientId: number, agentId: number, agentName: string) => void;
     unassignClient: (clientId: number) => void;
-    updateStrategy: (strategy: ClientStrategy) => void;
+    updateStrategy: (clientId: number, strategyText: string) => void;
+    deleteStrategy: (clientId: number) => void;
     upsertTarget: (agentId: number, agentName: string, month: string, targetClients: number) => void;
 }
 
 const ClientInboxContext = createContext<ClientInboxContextType | null>(null);
 
 export function ClientInboxProvider({ children }: { children: ReactNode }) {
-    const [inboxClients, setInboxClients] = useState<InboxClient[]>(() => {
-        const stored = loadFromStorage();
-        const storedIds = new Set(stored.map(c => c.id));
-        return [...SEED_CLIENTS, ...stored.filter(c => !SEED_IDS.has(c.id) && !storedIds.has(c.id))];
-    });
-    const [strategies, setStrategies] = useState<ClientStrategy[]>(SEED_STRATEGIES);
-    const [targets, setTargets] = useState<CSTAgentTarget[]>(SEED_TARGETS);
+    const [inboxClients, setInboxClients] = useState<InboxClient[]>([]);
+    const [strategies, setStrategies] = useState<ClientStrategy[]>([]);
+    const [targets, setTargets] = useState<CSTAgentTarget[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    useEffect(() => { saveToStorage(inboxClients); }, [inboxClients]);
+    const { fetchData: fetchActiveClients } = useClients();
 
-    const addInboxClient = (client: Omit<InboxClient, 'id' | 'submittedDate' | 'status'>) => {
-        const newClient: InboxClient = {
-            ...client,
-            id: Date.now(),
-            submittedDate: new Date().toISOString().split('T')[0],
-            status: 'pending',
-        };
-        setInboxClients(prev => [...prev, newClient]);
+    const fetchData = async () => {
+        try {
+            const [clientsRes, strategiesRes, targetsRes] = await Promise.all([
+                apiFetch('/clients'),
+                apiFetch('/cst-manager/strategies'),
+                apiFetch('/cst-manager/targets')
+            ]);
+
+            if (clientsRes.success) setInboxClients(clientsRes.data.map(mapBackendToClient));
+            if (strategiesRes.success) setStrategies(strategiesRes.data.map(mapBackendToStrategy));
+            if (targetsRes.success) setTargets(targetsRes.data.map(mapBackendToTarget));
+        } catch (error) {
+            console.error('Failed to fetch inbox data:', error);
+            toast.error('Could not load live data from server');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const assignClient = (clientId: number, agentId: number, agentName: string) => {
-        setInboxClients(prev =>
-            prev.map(c => c.id === clientId
-                ? { ...c, status: 'assigned', assignedTo: agentId, assignedName: agentName }
-                : c)
-        );
-    };
+    useEffect(() => {
+        fetchData();
+    }, []);
 
-    const unassignClient = (clientId: number) => {
-        setInboxClients(prev =>
-            prev.map(c => c.id === clientId
-                ? { ...c, status: 'pending' as InboxStatus, assignedTo: undefined, assignedName: undefined }
-                : c)
-        );
-    };
+    const assignClient = async (clientId: number, agentId: number, agentName: string) => {
+        try {
+            const res = await apiFetch(`/clients/${clientId}/assign`, {
+                method: 'PATCH',
+                body: JSON.stringify({ agentId })
+            });
 
-    const updateStrategy = (strategy: ClientStrategy) => {
-        setStrategies(prev => {
-            const exists = prev.find(s => s.clientId === strategy.clientId);
-            return exists
-                ? prev.map(s => s.clientId === strategy.clientId ? strategy : s)
-                : [...prev, strategy];
-        });
-    };
-
-    const upsertTarget = (agentId: number, agentName: string, month: string, targetClients: number) => {
-        setTargets(prev => {
-            const exists = prev.find(t => t.agentId === agentId && t.month === month);
-            if (exists) {
-                return prev.map(t => t.agentId === agentId && t.month === month
-                    ? { ...t, targetClients } : t);
+            if (res.success) {
+                setInboxClients(prev =>
+                    prev.map(c => c.id === clientId
+                        ? { ...c, status: 'active', assignedTo: agentId, assignedName: agentName }
+                        : c)
+                );
+                // Refresh both the inbox and the active clients list
+                await Promise.all([fetchData(), fetchActiveClients()]); 
+                toast.success(`Assigned to ${agentName}`);
             }
-            return [...prev, {
-                id: Date.now(), agentId, agentName, month, targetClients, achievedClients: 0,
-            }];
-        });
+        } catch (error) {
+            toast.error('Assignment failed');
+        }
+    };
+
+    const unassignClient = async (clientId: number) => {
+        try {
+            const res = await apiFetch(`/clients/${clientId}/unassign`, {
+                method: 'PATCH'
+            });
+
+            if (res.success) {
+                setInboxClients(prev =>
+                    prev.map(c => c.id === clientId
+                        ? { ...c, status: 'onboarding' as InboxStatus, assignedTo: undefined, assignedName: undefined }
+                        : c)
+                );
+                toast.success('Client unassigned');
+            }
+        } catch (error) {
+            toast.error('Failed to unassign client');
+        }
+    };
+
+    const updateStrategy = async (clientId: number, strategyText: string) => {
+        try {
+            const res = await apiFetch('/cst-manager/strategies', {
+                method: 'POST',
+                body: JSON.stringify({
+                    client_id: clientId,
+                    strategy_text: strategyText
+                })
+            });
+
+            if (res.success) {
+                fetchData(); // Refresh strategies
+                toast.success('Strategy saved');
+            }
+        } catch (error) {
+            toast.error('Failed to save strategy');
+        }
+    };
+
+    const deleteStrategy = async (clientId: number) => {
+        try {
+            const res = await apiFetch(`/cst-manager/strategies/${clientId}`, {
+                method: 'DELETE'
+            });
+
+            if (res.success) {
+                setStrategies(prev => prev.filter(s => s.clientId !== clientId));
+                toast.success('Strategy deleted');
+            }
+        } catch (error) {
+            toast.error('Failed to delete strategy');
+        }
+    };
+
+    const upsertTarget = async (agentId: number, agentName: string, month: string, targetClients: number) => {
+        try {
+            const res = await apiFetch('/cst-manager/targets', {
+                method: 'POST',
+                body: JSON.stringify({
+                    agent_id: agentId,
+                    target_month: month,
+                    target_clients: targetClients
+                })
+            });
+
+            if (res.success) {
+                fetchData(); // Refresh to get active/achieved counts
+                toast.success('Target updated');
+            }
+        } catch (error) {
+            toast.error('Failed to update target');
+        }
     };
 
     return (
         <ClientInboxContext.Provider value={{
             inboxClients, strategies, targets,
-            addInboxClient, assignClient, unassignClient, updateStrategy, upsertTarget,
+            assignClient, unassignClient, updateStrategy, deleteStrategy, upsertTarget,
         }}>
             {children}
         </ClientInboxContext.Provider>

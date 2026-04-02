@@ -9,7 +9,7 @@ import { Target, Pencil, Clock } from 'lucide-react';
 import { cls } from '../../styles/classes';
 import { toast } from 'sonner';
 import { useClientInbox } from '../../context/ClientInboxContext';
-import { CST_AGENTS } from '../../data/mockData';
+import { useEmployees } from '../../context/EmployeeContext';
 
 function targetPct(achieved: number, target: number) {
     if (target === 0) return 0;
@@ -24,14 +24,17 @@ function pctColor(pct: number) {
 
 export function TargetsPanel() {
     const { targets, upsertTarget } = useClientInbox();
+    const { employees } = useEmployees();
     const currentMonth = new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' });
 
     const [agentId, setAgentId] = useState<number | null>(null);
     const [targetClients, setTargetClients] = useState('');
 
+    const cstAgents = employees.filter(e => e.role === 'cst' || e.role === 'cst_manager');
+
     const handleSet = () => {
         if (!agentId || !targetClients) { toast.error('Select an agent and enter a target'); return; }
-        const agent = CST_AGENTS.find(a => a.id === agentId);
+        const agent = cstAgents.find(a => a.id === agentId);
         upsertTarget(agentId, agent?.name ?? '', currentMonth, Number(targetClients));
         toast.success(`Target set for ${agent?.name} — ${currentMonth}`);
         setAgentId(null);
@@ -56,7 +59,7 @@ export function TargetsPanel() {
                             <Select value={agentId !== null ? String(agentId) : ''} onValueChange={v => setAgentId(Number(v))}>
                                 <SelectTrigger><SelectValue placeholder="Select agent" /></SelectTrigger>
                                 <SelectContent>
-                                    {CST_AGENTS.map(a => (
+                                    {cstAgents.map(a => (
                                         <SelectItem key={a.id} value={String(a.id)}>{a.name} — {a.role}</SelectItem>
                                     ))}
                                 </SelectContent>
